@@ -37,29 +37,39 @@ defmodule Iteraptor do
     process(input, joiner)
   end
 
+  @doc """
+    iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end)
+    %{"a.b.c": 42}
+  """
+  def each(input, joiner \\ @joiner, fun) do
+    unless is_function(fun, 1), do: raise "Function or arity fun/1 is required"
+    process(input, joiner, "", %{}, fun)
+  end
+
   ##############################################################################
 
-  defp process(input, joiner, prefix \\ "", acc \\ %{})
+  defp process(input, joiner, prefix \\ "", acc \\ %{}, fun \\ nil)
 
   ##############################################################################
 
-  defp process(input, joiner, prefix, acc) when is_map(input) do
+  defp process(input, joiner, prefix, acc, fun) when is_map(input) do
     input |> Enum.reduce(acc, fn({k, v}, memo) ->
       prefix = join(prefix, k, joiner)
       if is_map(v) or is_list(v) do
-        process(v, joiner, prefix, memo)
+        process(v, joiner, prefix, memo, fun)
       else
+        unless is_nil(fun), do: fun.({prefix, v})
         Map.put memo, prefix, v
       end
     end)
   end
 
-  defp process(input, joiner, prefix, acc) when is_list(input) do
+  defp process(input, joiner, prefix, acc, fun) when is_list(input) do
     input
       |> Enum.with_index
       |> Enum.map(fn({k, v}) -> {v, k} end)
       |> Enum.into(%{})
-      |> process(joiner, prefix, acc)
+      |> process(joiner, prefix, acc, fun)
   end
 
   ##############################################################################
