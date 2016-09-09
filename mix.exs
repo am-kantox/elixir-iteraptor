@@ -4,7 +4,7 @@ defmodule Iteraptor.Mixfile do
   def project do
     [app: :iteraptor,
      version: "0.1.0",
-     elixir: "~> 1.3",
+     elixir: "~> 1",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      description: description(),
