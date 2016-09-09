@@ -1,5 +1,7 @@
 # Iteraptor
 
+[![Build Status](https://travis-ci.org/am-kantox/elixir-iteraptor.svg?branch=master)](https://travis-ci.org/am-kantox/elixir-iteraptor)
+
 Handy enumerable operations:
 
   * `to_flatmap`
