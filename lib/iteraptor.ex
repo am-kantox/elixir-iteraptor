@@ -50,6 +50,9 @@ defmodule Iteraptor do
     iex> %{"0": 42, "1": 42} |> Iteraptor.from_flatmap
     [42, 42]
 
+    iex> %{"1": :a1, "0": :a0, "2": :a2, "3": :a3, "4": :a4, "5": :a5, "6": :a6, "7": :a7, "8": :a8, "9": :a9, "10": :a10, "11": :a11} |> Iteraptor.from_flatmap
+    [:a0, :a1, :a2, :a3, :a4, :a5, :a6, :a7, :a8, :a9, :a10, :a11]
+
     iex> %{"0.a": 42, "0.b": 42} |> Iteraptor.from_flatmap
     [%{a: 42, b: 42}]
 
@@ -127,7 +130,7 @@ defmodule Iteraptor do
 
   ##############################################################################
 
-  defp put_or_update(input, joiner, prefix, value, fun) when is_map(input) do
+  defp put_or_update(input, joiner, prefix, value, fun \\ nil, path \\ "") when is_map(input) do
     case to_string(prefix) |> String.split(joiner, parts: 2) do
       [key, rest] ->
         {_, target} = input |> Map.get_and_update(join(key), fn current ->
@@ -135,11 +138,11 @@ defmodule Iteraptor do
             nil -> %{}
             _   -> current
           end
-          {current, old |> put_or_update(joiner, rest, value, fun)}
+          {current, old |> put_or_update(joiner, rest, value, fun, join(path, key, joiner))}
         end)
         target
       [key] ->
-        # FIXME fun !!!
+        unless is_nil(fun), do: fun.({path, value})
         cond do
           is_map(input) ->  input |> Map.put(join(key), value)
           is_list(input) ->  input ++ [value]
@@ -169,14 +172,20 @@ defmodule Iteraptor do
 
   defp quacks_as_list(input, joiner, prefix \\ "") do
     input = input |> Map.keys |> filter_keys(prefix)
-    (input |> Enum.map(fn k ->
-      k |> parse_key(joiner, prefix)
-    end)) == (0..Enum.count(input) - 1 |> Enum.to_list)
+    (input
+      |> Enum.map(fn k ->
+        k |> parse_key(joiner, prefix)
+      end)
+      |> Enum.sort) == (0..Enum.count(input) - 1 |> Enum.to_list)
   end
 
   defp imply_lists(input, joiner) when is_map(input) do
     if quacks_as_list(input, joiner) do
-      for v <- Map.values(input) do
+      sorted = input
+        |> Enum.sort(fn ({k1, _}, {k2, _}) ->
+             String.to_integer(to_string(k1)) < String.to_integer(to_string(k2))
+           end)
+      for {_, v} <- sorted do
         if is_map(v), do: imply_lists(v, joiner), else: v
       end
     else
