@@ -38,8 +38,23 @@ defmodule Iteraptor do
   end
 
   @doc """
-    iex> %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42} |> Iteraptor.from_flatmap
-    %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
+    # iex> %{"a.b.c": 42} |> Iteraptor.from_flatmap
+    # %{a: %{b: %{c: 42}}}
+
+    # iex> %{"a.b.c": 42, "a.b.d": 42} |> Iteraptor.from_flatmap
+    # %{a: %{b: %{c: 42, d: 42}}}
+
+    # iex> %{"a.b.c": 42, "a.b.d": 42, "a.e": 42} |> Iteraptor.from_flatmap
+    # %{a: %{b: %{c: 42, d: 42}, e: 42}}
+
+    iex> %{"0": 42, "1": 42} |> Iteraptor.from_flatmap
+    [42, 42]
+
+    # iex> %{"0.a": 42, "0.b": 42} |> Iteraptor.from_flatmap
+    # [%{a: 42, b: 42}]
+
+    # iex> %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42} |> Iteraptor.from_flatmap
+    # %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
   """
   def from_flatmap(input, joiner \\ @joiner) when is_map(input) do
     unprocess(input, joiner)
@@ -88,12 +103,14 @@ defmodule Iteraptor do
 
   defp unprocess(input, joiner, fun) when is_map(input) do
     acc = if quacks_as_list(input, joiner), do: [], else: %{}
-
+    input |> Enum.reduce(acc, fn({key, value}, acc) ->
+      put_or_update(acc, joiner, key, value, input, "", fun)
+    end)
   end
 
   ##############################################################################
 
-  defp join(l, r, joiner \\ @joiner)
+  defp join(l, r \\ "", joiner \\ @joiner)
 
   defp join(l, "", _) do
     String.to_atom(to_string(l))
@@ -109,37 +126,26 @@ defmodule Iteraptor do
 
   ##############################################################################
 
-  @doc """
-    iex> %{} |> Iteraptor.put_or_update(".", "a.b.c", 42)
-    %{a: %{b: %{c: 42}}}
-
-    iex> %{} |> Iteraptor.put_or_update(".", "a.b.c", 42)
-    ...>     |> Iteraptor.put_or_update(".", "a.b.d", 42)
-    %{a: %{b: %{c: 42, d: 42}}}
-
-    iex> %{} |> Iteraptor.put_or_update(".", "a.b.c", 42)
-    ...>     |> Iteraptor.put_or_update(".", "a.b.d", 42)
-    ...>     |> Iteraptor.put_or_update(".", "a.e", 42)
-    %{a: %{b: %{c: 42, d: 42}, e: 42}}
-  """
-  def put_or_update(input, joiner, prefix, value) when is_map(input) do
-    case prefix |> String.split(joiner, parts: 2) do
+  defp put_or_update(input, joiner, prefix, value, whole, whole_prefix, fun) when is_map(input) do
+    case to_string(prefix) |> String.split(joiner, parts: 2) do
       [key, rest] ->
-        {_, target} = input |> Map.get_and_update(join(key, ""), fn current ->
+        {_, target} = input |> Map.get_and_update(join(key), fn current ->
+          whole_prefix = join(whole_prefix, key, joiner)
           old = case current do
-            nil -> %{}
+            nil ->
+              if quacks_as_list(whole, joiner, whole_prefix), do: [], else: %{}
             _ -> current
           end
-          {current, old |> put_or_update(joiner, rest, value)}
+          {current, old |> put_or_update(joiner, rest, value, whole, whole_prefix, fun)}
         end)
         target
       [key] ->
-        input |> Map.put(join(key, ""), value)
+        # FIXME fun !!!
+        cond do
+          is_map(input) ->  input |> Map.put(join(key), value)
+          is_list(input) ->  input ++ [value] # FIXME may lose order!
+        end
     end
-  end
-
-  defp put_or_update(input, acc, joiner, key, value) when is_list(acc) do
-
   end
 
   ##############################################################################
@@ -166,6 +172,8 @@ defmodule Iteraptor do
 
   defp quacks_as_list(input, joiner, prefix \\ "") do
     input = input |> Map.keys |> filter_keys(prefix)
-    (input |> Enum.map(fn {k} -> k |> parse_key(joiner, prefix) end)) == (0..Enum.count(input) - 1 |> Enum.to_list)
+    (input |> Enum.map(fn k ->
+      k |> parse_key(joiner, prefix)
+    end)) == (0..Enum.count(input) - 1 |> Enum.to_list)
   end
 end
