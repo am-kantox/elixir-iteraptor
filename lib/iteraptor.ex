@@ -1,7 +1,20 @@
 defmodule Iteraptor do
+  @moduledoc """
+  `Iteraptor` makes complicated nested structures (currently `map`s and `list`s)
+    iteration easier.
+  """
+
   @joiner "."
 
   @doc """
+    Build a flatmap out of nested structure, concatenating the names of keys.
+    Example:
+
+        %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}} |> Iteraptor.to_flatmap
+        %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42}
+
+    Lists are handled gracefully, index is used as a key in resulting map.
+
     iex> [:a, 42] |> Iteraptor.to_flatmap
     %{"0": :a, "1": 42}
 
@@ -38,6 +51,12 @@ defmodule Iteraptor do
   end
 
   @doc """
+    Build a nested structure out of a flatmap given, decomposing the names of keys
+    and handling lists carefully. Example:
+
+        %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42} |> Iteraptor.from_flatmap
+        %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
+
     iex> %{"a.b.c": 42} |> Iteraptor.from_flatmap
     %{a: %{b: %{c: 42}}}
 
@@ -64,6 +83,16 @@ defmodule Iteraptor do
   end
 
   @doc """
+    Iterates the given nested structure, calling the callback provided on each
+    value. The key returned is a concatenated names of all the parent keys
+    (and or indices in a case of an array.)
+
+    Example:
+        %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end)
+        #⇒ %{"a.b.c": 42}
+
+    The return value is the result of call to `to_flatmap`.
+
     iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end)
     %{"a.b.c": 42}
   """
@@ -130,8 +159,9 @@ defmodule Iteraptor do
 
   ##############################################################################
 
+  @lint [{Credo.Check.Refactor.Nesting, false}, {Credo.Check.Refactor.ABCSize, false}]
   defp put_or_update(input, joiner, prefix, value, fun \\ nil, path \\ "") when is_map(input) do
-    case to_string(prefix) |> String.split(joiner, parts: 2) do
+    case prefix |> to_string |> String.split(joiner, parts: 2) do
       [key, rest] ->
         {_, target} = input |> Map.get_and_update(join(key), fn current ->
           old = case current do
@@ -146,6 +176,7 @@ defmodule Iteraptor do
         cond do
           is_map(input) ->  input |> Map.put(join(key), value)
           is_list(input) ->  input ++ [value]
+          true -> input # FIXME raise ??
         end
     end
   end
@@ -153,7 +184,8 @@ defmodule Iteraptor do
   ##############################################################################
 
   defp parse_key(key, joiner, prefix) do
-    k = to_string(key)
+    k = key
+        |> to_string
         |> String.split(joiner)
         |> Enum.at((prefix |> String.split(joiner) |> Enum.count) - 1)
     try do
@@ -189,9 +221,9 @@ defmodule Iteraptor do
         if is_map(v), do: imply_lists(v, joiner), else: v
       end
     else
-      for {k, v} <- input do
+      Enum.into(for {k, v} <- input do
         {k, (if is_map(v), do: imply_lists(v, joiner), else: v)}
-      end |> Enum.into(%{})
+      end, %{})
     end
   end
 end
