@@ -8,7 +8,6 @@ defmodule Iteraptor do
 
   @doc """
     Build a flatmap out of nested structure, concatenating the names of keys.
-    Example:
 
         %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}} |> Iteraptor.to_flatmap
         %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42}
@@ -54,7 +53,7 @@ defmodule Iteraptor do
 
   @doc """
     Build a nested structure out of a flatmap given, decomposing the names of keys
-    and handling lists carefully. Example:
+    and handling lists carefully.
 
         %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42} |> Iteraptor.from_flatmap
         %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
@@ -92,7 +91,7 @@ defmodule Iteraptor do
   @doc """
     Iterates the given nested structure, calling the callback provided on each
     value. The key returned is a concatenated names of all the parent keys
-    (and or indices in a case of an array.)
+    (and/or indices in a case of an array.)
 
     The return value is the result of call to `to_flatmap`.
 

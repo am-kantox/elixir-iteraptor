@@ -3,7 +3,7 @@ defmodule Iteraptor.Mixfile do
 
   def project do
     [app: :iteraptor,
-     version: "0.2.3",
+     version: "0.2.4",
      elixir: "~> 1.0",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -31,7 +31,8 @@ defmodule Iteraptor.Mixfile do
   defp deps do
     [
       {:credo, "~> 0.4", only: [:dev, :test]},
-      {:ex_doc, "~> 0.11", only: :dev}
+      {:ex_doc, "~> 0.11", only: :dev},
+      {:inch_ex, only: :docs}
     ]
   end
 
