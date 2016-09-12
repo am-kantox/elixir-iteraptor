@@ -15,7 +15,7 @@ defmodule Iteraptor do
 
     Lists are handled gracefully, index is used as a key in resulting map.
 
-    ## Examples
+    **More examples:**
 
         iex> [:a, 42] |> Iteraptor.to_flatmap
         %{"0": :a, "1": 42}
@@ -59,7 +59,7 @@ defmodule Iteraptor do
         %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42} |> Iteraptor.from_flatmap
         %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
 
-    ## Examples
+    **More examples:**
 
         iex> %{"a.b.c": 42} |> Iteraptor.from_flatmap
         %{a: %{b: %{c: 42}}}
@@ -73,13 +73,16 @@ defmodule Iteraptor do
         iex> %{"0": 42, "1": 42} |> Iteraptor.from_flatmap
         [42, 42]
 
-        iex> %{"1": :a1, "0": :a0, "2": :a2, "3": :a3, "4": :a4, "5": :a5, "6": :a6, "7": :a7, "8": :a8, "9": :a9, "10": :a10, "11": :a11} |> Iteraptor.from_flatmap
+        iex> %{"1": :a1, "0": :a0, "2": :a2, "3": :a3, "4": :a4, "5": :a5,
+        ...>   "6": :a6, "7": :a7, "8": :a8, "9": :a9, "10": :a10, "11": :a11}
+        ...> |> Iteraptor.from_flatmap
         [:a0, :a1, :a2, :a3, :a4, :a5, :a6, :a7, :a8, :a9, :a10, :a11]
 
         iex> %{"0.a": 42, "0.b": 42} |> Iteraptor.from_flatmap
         [%{a: 42, b: 42}]
 
-        iex> %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42} |> Iteraptor.from_flatmap
+        iex> %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42}
+        ...> |> Iteraptor.from_flatmap
         %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
   """
   def from_flatmap(input, joiner \\ @joiner) when is_map(input) do
@@ -91,16 +94,12 @@ defmodule Iteraptor do
     value. The key returned is a concatenated names of all the parent keys
     (and or indices in a case of an array.)
 
-    Example:
-        %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end)
-        #⇒ %{"a.b.c": 42}
-
     The return value is the result of call to `to_flatmap`.
 
-    ## Examples
+    **More examples:**
 
-    iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end)
-    %{"a.b.c": 42}
+        iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end)
+        %{"a.b.c": 42}
   """
   def each(input, joiner \\ @joiner, fun) do
     unless is_function(fun, 1), do: raise "Function or arity fun/1 is required"
