@@ -14,7 +14,7 @@ Handy enumerable operations:
 
     ```elixir
     def deps do
-      [{:iteraptor, "~> 0.1.0"}]
+      [{:iteraptor, "~> 0.3.0"}]
     end
     ```
 
@@ -29,5 +29,21 @@ Handy enumerable operations:
 
 ```elixir
 iex> %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}} |> Iteraptor.to_flatmap
-%{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42}
+%{"a.b.c" => 42, "a.b.d.0" => nil, "a.b.d.1" => 42, "a.e.0" => :f, "a.e.1" => 42}
 ```
+
+To be implicitly as explicit as possible, the current implementation creates
+string keys for those, containing joiner and atoms for those that haven’t.
+
+That makes normal maps to be resistant to
+
+```elixir
+iex> %{a: %{b: %{c: 42}}} |> Iteraptor.to_flatmap |> Iteraptor.from_flatmap
+%{a: %{b: %{c: 42}}}
+
+```
+
+As of version `0.3.0`, the module supports
+[`Keyword`](http://elixir-lang.org/docs/stable/elixir/Keyword.html) on input,
+but it will be output as map for `|> Iteraptor.to_flatmap |> Iteraptor.from_flatmap`
+back and forth transformation.

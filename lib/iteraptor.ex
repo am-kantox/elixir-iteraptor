@@ -26,25 +26,28 @@ defmodule Iteraptor do
         %{a: 42, b: 42}
 
         iex> %{a: %{b: 42}, d: 42} |> Iteraptor.to_flatmap
-        %{"a.b": 42, d: 42}
+        %{"a.b" => 42, d: 42}
 
         iex> %{a: [:b, 42], d: 42} |> Iteraptor.to_flatmap
-        %{"a.0": :b, "a.1": 42, d: 42}
+        %{"a.0" => :b, "a.1" => 42, d: 42}
 
         iex> %{a: %{b: [:c, 42]}, d: 42} |> Iteraptor.to_flatmap
-        %{"a.b.0": :c, "a.b.1": 42, d: 42}
+        %{"a.b.0" => :c, "a.b.1" => 42, d: 42}
 
         iex> %{a: %{b: 42}} |> Iteraptor.to_flatmap
-        %{"a.b": 42}
+        %{"a.b" => 42}
 
         iex> %{a: %{b: %{c: 42}}} |> Iteraptor.to_flatmap
-        %{"a.b.c": 42}
+        %{"a.b.c" => 42}
 
         iex> %{a: %{b: %{c: 42}}, d: 42} |> Iteraptor.to_flatmap
-        %{"a.b.c": 42, d: 42}
+        %{"a.b.c" => 42, d: 42}
+
+        iex> [a: [b: [c: 42]], d: 42] |> Iteraptor.to_flatmap
+        %{"a.b.c" => 42, d: 42}
 
         iex> %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}} |> Iteraptor.to_flatmap
-        %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42}
+        %{"a.b.c" => 42, "a.b.d.0" => nil, "a.b.d.1" => 42, "a.e.0" => :f, "a.e.1" => 42}
   """
 
   def to_flatmap(input, joiner \\ @joiner) when is_map(input) or is_list(input) do
@@ -98,7 +101,7 @@ defmodule Iteraptor do
     **More examples:**
 
         iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end)
-        %{"a.b.c": 42}
+        %{"a.b.c" => 42}
   """
   def each(input, joiner \\ @joiner, fun) do
     unless is_function(fun, 1), do: raise "Function or arity fun/1 is required"
@@ -124,11 +127,15 @@ defmodule Iteraptor do
   end
 
   defp process(input, joiner, prefix, acc, fun) when is_list(input) do
-    input
-      |> Enum.with_index
-      |> Enum.map(fn({k, v}) -> {v, k} end)
-      |> Enum.into(%{})
-      |> process(joiner, prefix, acc, fun)
+    if Keyword.keyword?(input) do
+      input |> Enum.into(%{}) |> process(joiner, prefix, acc, fun)
+    else
+      input
+        |> Enum.with_index
+        |> Enum.map(fn({k, v}) -> {v, k} end)
+        |> Enum.into(%{})
+        |> process(joiner, prefix, acc, fun)
+    end
   end
 
   ##############################################################################
@@ -149,16 +156,21 @@ defmodule Iteraptor do
 
   defp join(l, r \\ "", joiner \\ @joiner)
 
-  defp join(l, "", _) do
-    String.to_atom(to_string(l))
+  defp join(l, "", joiner) do
+    s = to_string l
+    if s |> String.contains?(joiner) do
+      s
+    else
+      String.to_atom s
+    end
   end
 
-  defp join("", r, _) do
-    String.to_atom(to_string(r))
+  defp join("", r, joiner) do
+    join(r, "", joiner)
   end
 
   defp join(l, r, joiner) do
-    String.to_atom(to_string(l) <> joiner <> to_string(r))
+    to_string to_string(l) <> joiner <> to_string(r)
   end
 
   ##############################################################################
