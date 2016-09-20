@@ -1,7 +1,33 @@
 defmodule Iteraptor do
   @moduledoc """
-  `Iteraptor` makes complicated nested structures (currently `map`s and `list`s)
-    iteration easier.
+  `Iteraptor` makes complicated nested structures (currently `map`s, `list`s
+    and somehow `Keyword`s) iteration easier.
+
+  ## Usage
+
+  ### `to_flatmap`:
+
+      iex> %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}} |> Iteraptor.to_flatmap
+      %{"a.b.c" => 42, "a.b.d.0" => nil, "a.b.d.1" => 42, "a.e.0" => :f, "a.e.1" => 42}
+
+  ### `from_flatmap`:
+
+      iex> %{"a.b.c" => 42, "a.b.d.0" => nil, "a.b.d.1" => 42, "a.e.0" => :f, "a.e.1" => 42}
+      ...> |> Iteraptor.from_flatmap
+      %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
+
+  ### `each`:
+
+      iex> %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
+      ...> |> Iteraptor.each(fn({k, v}) ->
+      ...>      IO.puts(k <> " ⇒ " <> inspect(v))
+      ...>    end)
+      a.b.c ⇒ 42
+      a.b.d.0 ⇒ nil
+      a.b.d.1 ⇒ 42
+      a.e.0 ⇒ :f
+      a.e.1 ⇒ 42
+
   """
 
   @joiner "."
