@@ -7,54 +7,54 @@ defmodule Iteraptor do
   @joiner "."
 
   @doc """
-    Build a flatmap out of nested structure, concatenating the names of keys.
+  Build a flatmap out of nested structure, concatenating the names of keys.
 
-        %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}} |> Iteraptor.to_flatmap
-        %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42}
+      %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}} |> Iteraptor.to_flatmap
+      %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42}
 
-    Lists are handled gracefully, index is used as a key in resulting map.
+  Lists are handled gracefully, index is used as a key in resulting map.
 
-    **Parameters**
+  ## Parameters
 
-    - input: nested map/list/keyword to be flattened.
-    - joiner: the character to be used to join keys while flattening,
-    _optional_, default value is `"."`;
-    e.g. `%{a: {b: 42}}` will be flattened to `%{"a.b" => 42}`.
+  - input: nested map/list/keyword to be flattened.
+  - joiner: the character to be used to join keys while flattening,
+  _optional_, default value is `"."`;
+  e.g. `%{a: {b: 42}}` will be flattened to `%{"a.b" => 42}`.
 
-    **Examples**
+  ## Examples
 
-        iex> [:a, 42] |> Iteraptor.to_flatmap
-        %{"0": :a, "1": 42}
+      iex> [:a, 42] |> Iteraptor.to_flatmap
+      %{"0": :a, "1": 42}
 
-        iex> %{a: 42} |> Iteraptor.to_flatmap
-        %{a: 42}
+      iex> %{a: 42} |> Iteraptor.to_flatmap
+      %{a: 42}
 
-        iex> %{a: 42, b: 42} |> Iteraptor.to_flatmap
-        %{a: 42, b: 42}
+      iex> %{a: 42, b: 42} |> Iteraptor.to_flatmap
+      %{a: 42, b: 42}
 
-        iex> %{a: %{b: 42}, d: 42} |> Iteraptor.to_flatmap
-        %{"a.b" => 42, d: 42}
+      iex> %{a: %{b: 42}, d: 42} |> Iteraptor.to_flatmap
+      %{"a.b" => 42, d: 42}
 
-        iex> %{a: [:b, 42], d: 42} |> Iteraptor.to_flatmap
-        %{"a.0" => :b, "a.1" => 42, d: 42}
+      iex> %{a: [:b, 42], d: 42} |> Iteraptor.to_flatmap
+      %{"a.0" => :b, "a.1" => 42, d: 42}
 
-        iex> %{a: %{b: [:c, 42]}, d: 42} |> Iteraptor.to_flatmap
-        %{"a.b.0" => :c, "a.b.1" => 42, d: 42}
+      iex> %{a: %{b: [:c, 42]}, d: 42} |> Iteraptor.to_flatmap
+      %{"a.b.0" => :c, "a.b.1" => 42, d: 42}
 
-        iex> %{a: %{b: 42}} |> Iteraptor.to_flatmap
-        %{"a.b" => 42}
+      iex> %{a: %{b: 42}} |> Iteraptor.to_flatmap
+      %{"a.b" => 42}
 
-        iex> %{a: %{b: %{c: 42}}} |> Iteraptor.to_flatmap
-        %{"a.b.c" => 42}
+      iex> %{a: %{b: %{c: 42}}} |> Iteraptor.to_flatmap
+      %{"a.b.c" => 42}
 
-        iex> %{a: %{b: %{c: 42}}, d: 42} |> Iteraptor.to_flatmap
-        %{"a.b.c" => 42, d: 42}
+      iex> %{a: %{b: %{c: 42}}, d: 42} |> Iteraptor.to_flatmap
+      %{"a.b.c" => 42, d: 42}
 
-        iex> [a: [b: [c: 42]], d: 42] |> Iteraptor.to_flatmap
-        %{"a.b.c" => 42, d: 42}
+      iex> [a: [b: [c: 42]], d: 42] |> Iteraptor.to_flatmap
+      %{"a.b.c" => 42, d: 42}
 
-        iex> %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}} |> Iteraptor.to_flatmap
-        %{"a.b.c" => 42, "a.b.d.0" => nil, "a.b.d.1" => 42, "a.e.0" => :f, "a.e.1" => 42}
+      iex> %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}} |> Iteraptor.to_flatmap
+      %{"a.b.c" => 42, "a.b.d.0" => nil, "a.b.d.1" => 42, "a.e.0" => :f, "a.e.1" => 42}
   """
 
   def to_flatmap(input, joiner \\ @joiner) when is_map(input) or is_list(input) do
@@ -62,69 +62,69 @@ defmodule Iteraptor do
   end
 
   @doc """
-    Build a nested structure out of a flatmap given, decomposing the names of keys
-    and handling lists carefully.
+  Build a nested structure out of a flatmap given, decomposing the names of keys
+  and handling lists carefully.
 
-        %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42} |> Iteraptor.from_flatmap
-        %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
+      %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42} |> Iteraptor.from_flatmap
+      %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
 
-    **Parameters**
+  ## Parameters
 
-    - input: flat map to be “expanded” to nested maps/lists.
-    - joiner: the character to be used to “un-join” keys while flattening,
-    _optional_, default value is `"."`;
-    e.g. `%{"a.b" => 42}` will be unveiled to `%{a: {b: 42}}`.
+  - input: flat map to be “expanded” to nested maps/lists.
+  - joiner: the character to be used to “un-join” keys while flattening,
+  _optional_, default value is `"."`;
+  e.g. `%{"a.b" => 42}` will be unveiled to `%{a: {b: 42}}`.
 
-    **Examples**
+  ## Examples
 
-        iex> %{"a.b.c": 42} |> Iteraptor.from_flatmap
-        %{a: %{b: %{c: 42}}}
+      iex> %{"a.b.c": 42} |> Iteraptor.from_flatmap
+      %{a: %{b: %{c: 42}}}
 
-        iex> %{"a.b.c": 42, "a.b.d": 42} |> Iteraptor.from_flatmap
-        %{a: %{b: %{c: 42, d: 42}}}
+      iex> %{"a.b.c": 42, "a.b.d": 42} |> Iteraptor.from_flatmap
+      %{a: %{b: %{c: 42, d: 42}}}
 
-        iex> %{"a.b.c": 42, "a.b.d": 42, "a.e": 42} |> Iteraptor.from_flatmap
-        %{a: %{b: %{c: 42, d: 42}, e: 42}}
+      iex> %{"a.b.c": 42, "a.b.d": 42, "a.e": 42} |> Iteraptor.from_flatmap
+      %{a: %{b: %{c: 42, d: 42}, e: 42}}
 
-        iex> %{"0": 42, "1": 42} |> Iteraptor.from_flatmap
-        [42, 42]
+      iex> %{"0": 42, "1": 42} |> Iteraptor.from_flatmap
+      [42, 42]
 
-        iex> %{"1": :a1, "0": :a0, "2": :a2, "3": :a3, "4": :a4, "5": :a5,
-        ...>   "6": :a6, "7": :a7, "8": :a8, "9": :a9, "10": :a10, "11": :a11}
-        ...> |> Iteraptor.from_flatmap
-        [:a0, :a1, :a2, :a3, :a4, :a5, :a6, :a7, :a8, :a9, :a10, :a11]
+      iex> %{"1": :a1, "0": :a0, "2": :a2, "3": :a3, "4": :a4, "5": :a5,
+      ...>   "6": :a6, "7": :a7, "8": :a8, "9": :a9, "10": :a10, "11": :a11}
+      ...> |> Iteraptor.from_flatmap
+      [:a0, :a1, :a2, :a3, :a4, :a5, :a6, :a7, :a8, :a9, :a10, :a11]
 
-        iex> %{"0.a": 42, "0.b": 42} |> Iteraptor.from_flatmap
-        [%{a: 42, b: 42}]
+      iex> %{"0.a": 42, "0.b": 42} |> Iteraptor.from_flatmap
+      [%{a: 42, b: 42}]
 
-        iex> %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42}
-        ...> |> Iteraptor.from_flatmap
-        %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
+      iex> %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42}
+      ...> |> Iteraptor.from_flatmap
+      %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
   """
   def from_flatmap(input, joiner \\ @joiner) when is_map(input) do
     unprocess(input, joiner)
   end
 
   @doc """
-    Iterates the given nested structure, calling the callback provided on each
-    value. The key returned is a concatenated names of all the parent keys
-    (and/or indices in a case of an array.)
+  Iterates the given nested structure, calling the callback provided on each
+  value. The key returned is a concatenated names of all the parent keys
+  (and/or indices in a case of an array.)
 
-    The return value is the result of call to `to_flatmap`.
+  The return value is the result of call to `to_flatmap`.
 
-    **Parameters**
+  ## Parameters
 
-    - input:  nested map/list/keyword to be walked through.
-    - joiner: the character to be used to join keys while flattening,
-    is returned to the callback as iterated key name;
-    _optional_, default value is `"."`;
-    - fun:    callback to be called on each _value_;
-    e.g. on `%{a: {b: 42}}` will be called once, with tuple `{"a.b", 42}`.
+  - input:  nested map/list/keyword to be walked through.
+  - joiner: the character to be used to join keys while flattening,
+  is returned to the callback as iterated key name;
+  _optional_, default value is `"."`;
+  - fun:    callback to be called on each _value_;
+  e.g. on `%{a: {b: 42}}` will be called once, with tuple `{"a.b", 42}`.
 
-    **Examples**
+  ## Examples
 
-        iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end)
-        %{"a.b.c" => 42}
+      iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end)
+      %{"a.b.c" => 42}
   """
   def each(input, joiner \\ @joiner, fun) do
     unless is_function(fun, 1), do: raise "Function or arity fun/1 is required"
