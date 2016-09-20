@@ -16,8 +16,8 @@ defmodule Iteraptor do
 
   ## Parameters
 
-  - input: nested map/list/keyword to be flattened.
-  - joiner: the character to be used to join keys while flattening,
+  - `input`: nested map/list/keyword to be flattened.
+  - `joiner`: the character to be used to join keys while flattening,
   _optional_, default value is `"."`;
   e.g. `%{a: {b: 42}}` will be flattened to `%{"a.b" => 42}`.
 
@@ -70,8 +70,8 @@ defmodule Iteraptor do
 
   ## Parameters
 
-  - input: flat map to be “expanded” to nested maps/lists.
-  - joiner: the character to be used to “un-join” keys while flattening,
+  - `input`: flat map to be “expanded” to nested maps/lists.
+  - `joiner`: the character to be used to “un-join” keys while flattening,
   _optional_, default value is `"."`;
   e.g. `%{"a.b" => 42}` will be unveiled to `%{a: {b: 42}}`.
 
@@ -114,11 +114,11 @@ defmodule Iteraptor do
 
   ## Parameters
 
-  - input:  nested map/list/keyword to be walked through.
-  - joiner: the character to be used to join keys while flattening,
+  - `input`:  nested map/list/keyword to be walked through.
+  - `joiner`: the character to be used to join keys while flattening,
   is returned to the callback as iterated key name;
   _optional_, default value is `"."`;
-  - fun:    callback to be called on each _value_;
+  - `fun`:    callback to be called on each _value_;
   e.g. on `%{a: {b: 42}}` will be called once, with tuple `{"a.b", 42}`.
 
   ## Examples
