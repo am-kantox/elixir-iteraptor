@@ -14,14 +14,14 @@ defmodule Iteraptor do
 
     Lists are handled gracefully, index is used as a key in resulting map.
 
-    ## Parameters
+    **Parameters**
 
     - input: nested map/list/keyword to be flattened.
     - joiner: the character to be used to join keys while flattening,
-              _optional_, default value is `"."`;
-              e.g. `%{a: {b: 42}}` will be flattened to `%{"a.b" => 42}`.
+    _optional_, default value is `"."`;
+    e.g. `%{a: {b: 42}}` will be flattened to `%{"a.b" => 42}`.
 
-    ## Examples
+    **Examples**
 
         iex> [:a, 42] |> Iteraptor.to_flatmap
         %{"0": :a, "1": 42}
@@ -68,14 +68,14 @@ defmodule Iteraptor do
         %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42} |> Iteraptor.from_flatmap
         %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
 
-    ## Parameters
+    **Parameters**
 
     - input: flat map to be “expanded” to nested maps/lists.
     - joiner: the character to be used to “un-join” keys while flattening,
-              _optional_, default value is `"."`;
-              e.g. `%{"a.b" => 42}` will be unveiled to `%{a: {b: 42}}`.
+    _optional_, default value is `"."`;
+    e.g. `%{"a.b" => 42}` will be unveiled to `%{a: {b: 42}}`.
 
-    ## Examples
+    **Examples**
 
         iex> %{"a.b.c": 42} |> Iteraptor.from_flatmap
         %{a: %{b: %{c: 42}}}
@@ -112,16 +112,16 @@ defmodule Iteraptor do
 
     The return value is the result of call to `to_flatmap`.
 
-    ## Parameters
+    **Parameters**
 
     - input:  nested map/list/keyword to be walked through.
     - joiner: the character to be used to join keys while flattening,
-              is returned to the callback as iterated key name;
-              _optional_, default value is `"."`;
+    is returned to the callback as iterated key name;
+    _optional_, default value is `"."`;
     - fun:    callback to be called on each _value_;
-              e.g. on `%{a: {b: 42}}` will be called once, with tuple `{"a.b", 42}`.
+    e.g. on `%{a: {b: 42}}` will be called once, with tuple `{"a.b", 42}`.
 
-    ## Examples
+    **Examples**
 
         iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end)
         %{"a.b.c" => 42}
