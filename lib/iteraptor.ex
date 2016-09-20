@@ -18,10 +18,13 @@ defmodule Iteraptor do
 
   ### `each`:
 
-      iex> %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
-      ...> |> Iteraptor.each(fn({k, v}) ->
-      ...>      IO.puts(k <> " ⇒ " <> inspect(v))
-      ...>    end)
+      %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
+        |> Iteraptor.each(fn({k, v}) ->
+          IO.puts(k <> " ⇒ " <> inspect(v))
+        end)
+
+  Returning:
+
       a.b.c ⇒ 42
       a.b.d.0 ⇒ nil
       a.b.d.1 ⇒ 42
