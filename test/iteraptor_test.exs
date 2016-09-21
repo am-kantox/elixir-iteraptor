@@ -3,16 +3,12 @@ defmodule Struct1 do
 
   def fields, do: @fields
   defstruct @fields
-
-  use ExConstructor
 end
 defmodule Struct2 do
   @fields [field2: nil]
 
   def fields, do: @fields
   defstruct @fields
-
-  use ExConstructor
 end
 
 defmodule IteraptorTest do

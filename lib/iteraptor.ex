@@ -321,7 +321,7 @@ defmodule Iteraptor do
   end
 
   defp is_struct(input) when is_map(input) do
-    input |> Enum.reduce(nil, fn {k, v}, acc ->
+    input |> Enum.reduce(nil, fn {k, _}, acc ->
       case k |> to_string |> String.split(~r{#{@struct_joiner}(?=[^#{@struct_joiner}]*$)}) do
         [^acc, _] -> acc
         [struct_name, _] -> if acc == nil, do: struct_name, else: false

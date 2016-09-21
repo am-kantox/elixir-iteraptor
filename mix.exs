@@ -16,7 +16,7 @@ defmodule Iteraptor.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger, :exconstructor]]
+    [applications: [:logger]]
   end
 
   # Dependencies can be Hex packages:
@@ -30,11 +30,9 @@ defmodule Iteraptor.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
-      {:exconstructor, "~> 1.0"},
-
       {:credo, "~> 0.4", only: [:dev, :test]},
       {:ex_doc, "~> 0.11", only: :dev},
-      {:inch_ex, only: :docs}
+      {:inch_ex, "~> 0.0", only: :docs}
     ]
   end
 
