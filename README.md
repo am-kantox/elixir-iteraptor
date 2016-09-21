@@ -43,7 +43,18 @@ iex> %{a: %{b: %{c: 42}}} |> Iteraptor.to_flatmap |> Iteraptor.from_flatmap
 
 ```
 
+## Changelog
+
 As of version `0.3.0`, the module supports
 [`Keyword`](http://elixir-lang.org/docs/stable/elixir/Keyword.html) on input,
 but it will be output as map for `|> Iteraptor.to_flatmap |> Iteraptor.from_flatmap`
 back and forth transformation.
+
+As of version `0.4.0`, the module supports
+[structs](http://elixir-lang.org/getting-started/structs.html) on input.
+Structs will be automagically created on `|> Iteraptor.from_flatmap` from
+keys like `StructName%field` if a) this structure is known to the system
+and b) keys are consistent (e. g. there are no subsequent elements,
+belonging to different structs: `["S1%f" => 42, "S2%f" => 3.14]`.)
+
+Please see examples for an inspiration.
