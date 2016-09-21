@@ -176,10 +176,12 @@ defmodule Iteraptor do
 
   ##############################################################################
 
+  @lint [{Credo.Check.Refactor.FunctionArity, false}]
   defp process(input, joiner, type \\ nil, prefix \\ "", acc \\ %{}, fun \\ nil)
 
   ### -----------------------------------------------------------------------###
 
+  @lint [{Credo.Check.Refactor.FunctionArity, false}]
   defp process(input, joiner, nil, prefix, acc, fun) do
     type = case Enumerable.impl_for(input) do
              Enumerable.List -> if Keyword.keyword?(input), do: :keyword, else: :list
@@ -191,10 +193,12 @@ defmodule Iteraptor do
 
   ### -----------------------------------------------------------------------###
 
+  @lint [{Credo.Check.Refactor.FunctionArity, false}]
   defp process(_, _, :unknown, prefix, _, _) do
     raise ArgumentError, message: "Unsupported data type found at prefix: #{prefix}"
   end
 
+  @lint [{Credo.Check.Refactor.FunctionArity, false}]
   defp process(input, joiner, :map, prefix, acc, fun) do
     input |> Enum.reduce(acc, fn({k, v}, memo) ->
       prefix = join(prefix, k, joiner)
@@ -207,10 +211,12 @@ defmodule Iteraptor do
     end)
   end
 
+  @lint [{Credo.Check.Refactor.FunctionArity, false}]
   defp process(input, joiner, :keyword, prefix, acc, fun) do
     input |> Enum.into(%{}) |> process(joiner, nil, prefix, acc, fun)
   end
 
+  @lint [{Credo.Check.Refactor.FunctionArity, false}]
   defp process(input, joiner, :list, prefix, acc, fun) do
     input
       |> Enum.with_index
@@ -219,13 +225,14 @@ defmodule Iteraptor do
       |> process(joiner, nil, prefix, acc, fun)
   end
 
+  @lint [{Credo.Check.Refactor.FunctionArity, false}]
   defp process(input, joiner, :struct, prefix, acc, fun) do
     struct_name = input.__struct__ |> inspect |> String.replace(".", @struct_joiner)
     input
       |> Map.keys
       |> Enum.filter(fn e -> e != :__struct__ end)
       |> Enum.map(fn e ->
-           { "#{struct_name}%#{e}", get_in(input, [Access.key!(e)]) }
+           {"#{struct_name}%#{e}", get_in(input, [Access.key!(e)])}
          end)
       |> Enum.into(%{})
       |> process(joiner, nil, prefix, acc, fun)
@@ -320,6 +327,7 @@ defmodule Iteraptor do
       |> Enum.sort) == (0..Enum.count(input) - 1 |> Enum.to_list)
   end
 
+  @lint [{Credo.Check.Refactor.Nesting, false}]
   defp is_struct(input) when is_map(input) do
     input |> Enum.reduce(nil, fn {k, _}, acc ->
       case k |> to_string |> String.split(~r{#{@struct_joiner}(?=[^#{@struct_joiner}]*$)}) do
@@ -330,6 +338,7 @@ defmodule Iteraptor do
     end)
   end
 
+  @lint [{Credo.Check.Refactor.ABCSize, false}]
   defp imply_lists(input, joiner) when is_map(input) do
     if quacks_as_list(input, joiner) do
       sorted = input
