@@ -14,7 +14,9 @@ defmodule Iteraptor.Iteraptable do
       end
 
       iex> %Iteraptor.Struct{field: 42}
-      ...>   |> Enum.each(fn e -> IO.inspect(e) end)
+      ...>   |> Enum.each(fn e -> Logger.debug(inspect(e)) end)
+      :ok
+
       #⇒   {:field, 42}
 
   ## Usage
@@ -22,7 +24,7 @@ defmodule Iteraptor.Iteraptable do
   Use the module within the struct of your choice and this struct will be
   automagically granted `Enumerable` and `Collectable` protocols implementations.
   """
-  
+
   @codepieces [
     enumerable: """
 
