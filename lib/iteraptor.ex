@@ -20,7 +20,7 @@ defmodule Iteraptor do
 
       %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
         |> Iteraptor.each(fn({k, v}) ->
-          IO.puts(k <> " ⇒ " <> inspect(v))
+          Logger.debug(k <> " ⇒ " <> inspect(v))
         end)
 
   Returning:
@@ -166,7 +166,7 @@ defmodule Iteraptor do
 
   ## Examples
 
-      iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end)
+      iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
       %{"a.b.c" => 42}
   """
   def each(input, joiner \\ @joiner, fun) do

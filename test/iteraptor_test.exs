@@ -4,6 +4,7 @@ defmodule Struct1 do
   def fields, do: @fields
   defstruct @fields
 end
+
 defmodule Struct2 do
   @fields [field2: nil]
 
