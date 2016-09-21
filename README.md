@@ -4,17 +4,26 @@
 [![Inline docs](http://inch-ci.org/github/am-kantox/elixir-iteraptor.svg)](http://inch-ci.org/github/am-kantox/elixir-iteraptor)
 [![Deps Status](https://beta.hexfaktor.org/badge/all/github/am-kantox/elixir-iteraptor.svg)](https://beta.hexfaktor.org/github/am-kantox/elixir-iteraptor)
 
-Handy enumerable operations:
+### Handy enumerable operations
 
-  * `to_flatmap`
+  * `Iteraptor.to_flatmap/1` to flatten a deeply nested map/list/keyword/struct into flatten map with concatenated keys;
+  * `Iteraptor.from_flatmap/1` to “unveil”/“unflatten” the previously flattened map into nested structure;
+  * `Iteraptor.each/2` to iterate over nested a deeply nested map/list/keyword/struct;
+  * `use Iteraptor.Iteraptable` to automagically implement `Enumerable` and `Collectable` protocols on the structure.
 
-## Installation
+### HexDocs
+
+  * [API Reference](https://hexdocs.pm/iteraptor/api-reference.html)
+  * [`Iteraptor`](https://hexdocs.pm/iteraptor/Iteraptor.html)
+  * [`Iteraptor.Iteraptable`](https://hexdocs.pm/iteraptor/Iteraptor.Iteraptable.html)
+
+### Installation
 
   1. Add `iteraptor` to your list of dependencies in `mix.exs`:
 
     ```elixir
     def deps do
-      [{:iteraptor, "~> 0.3.0"}]
+      [{:iteraptor, "~> 0.5.0"}]
     end
     ```
 
@@ -25,7 +34,8 @@ Handy enumerable operations:
       [applications: [:iteraptor]]
     end
     ```
-## Usage
+
+### Usage
 
 ```elixir
 iex> %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}} |> Iteraptor.to_flatmap
@@ -43,9 +53,9 @@ iex> %{a: %{b: %{c: 42}}} |> Iteraptor.to_flatmap |> Iteraptor.from_flatmap
 
 ```
 
-## Changelog
+### Changelog
 
-### `0.5.0`
+#### `0.5.0`
 
 `use Iteraptor.Iteraptable` inside structs to make them both
 [`Enumerable`](http://elixir-lang.org/docs/stable/elixir/Enumerable.html) and
@@ -66,7 +76,7 @@ iex> %Iteraptor.Struct{field: 42}
 #⇒   {:field, 42}
 ```
 
-### `0.4.0`
+#### `0.4.0`
 
 Support for [structs](http://elixir-lang.org/getting-started/structs.html) on input.
 Structs will be automagically created on `|> Iteraptor.from_flatmap` from
@@ -76,7 +86,7 @@ belonging to different structs: `["S1%f" => 42, "S2%f" => 3.14]`.)
 
 Please see examples for an inspiration.
 
-### `0.3.0`
+#### `0.3.0`
 
 Support for [`Keyword`](http://elixir-lang.org/docs/stable/elixir/Keyword.html) on input,
 but it will be output as map for `|> Iteraptor.to_flatmap |> Iteraptor.from_flatmap`
