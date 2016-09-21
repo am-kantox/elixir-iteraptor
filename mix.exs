@@ -3,7 +3,7 @@ defmodule Iteraptor.Mixfile do
 
   def project do
     [app: :iteraptor,
-     version: "0.3.5",
+     version: "0.4.0",
      elixir: "~> 1.0",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -16,7 +16,7 @@ defmodule Iteraptor.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger]]
+    [applications: [:logger, :exconstructor]]
   end
 
   # Dependencies can be Hex packages:
@@ -30,6 +30,8 @@ defmodule Iteraptor.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
+      {:exconstructor, "~> 1.0"},
+
       {:credo, "~> 0.4", only: [:dev, :test]},
       {:ex_doc, "~> 0.11", only: :dev},
       {:inch_ex, only: :docs}
@@ -38,7 +40,7 @@ defmodule Iteraptor.Mixfile do
 
   defp description do
     """
-    This small library allows the deep iteration / mapping of Enums.
+    This small library allows the deep iteration / mapping of Enumerables.
     """
   end
 

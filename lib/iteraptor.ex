@@ -34,6 +34,7 @@ defmodule Iteraptor do
   """
 
   @joiner "."
+  @struct_joiner "%"
 
   @doc """
   Build a flatmap out of nested structure, concatenating the names of keys.
@@ -45,7 +46,7 @@ defmodule Iteraptor do
 
   ## Parameters
 
-  - `input`: nested map/list/keyword to be flattened.
+  - `input`: nested map/list/keyword/struct to be flattened.
   - `joiner`: the character to be used to join keys while flattening,
   _optional_, default value is `"."`;
   e.g. `%{a: {b: 42}}` will be flattened to `%{"a.b" => 42}`.
@@ -82,8 +83,14 @@ defmodule Iteraptor do
       iex> [a: [b: [c: 42]], d: 42] |> Iteraptor.to_flatmap
       %{"a.b.c" => 42, d: 42}
 
+      iex> [a: [[:b], 42], d: 42] |> Iteraptor.to_flatmap
+      %{"a.0.0" => :b, "a.1" => 42, d: 42}
+
       iex> %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}} |> Iteraptor.to_flatmap
       %{"a.b.c" => 42, "a.b.d.0" => nil, "a.b.d.1" => 42, "a.e.0" => :f, "a.e.1" => 42}
+
+      iex> %Struct1{field1: %Struct2{field2: [%{a: 42}, :b]}} |> Iteraptor.to_flatmap
+      %{"Struct1%field1.Struct2%field2.0.a" => 42, "Struct1%field1.Struct2%field2.1" => :b}
   """
 
   def to_flatmap(input, joiner \\ @joiner) when is_map(input) or is_list(input) do
@@ -126,9 +133,16 @@ defmodule Iteraptor do
       iex> %{"0.a": 42, "0.b": 42} |> Iteraptor.from_flatmap
       [%{a: 42, b: 42}]
 
+      iex> %{"a.0.0" => :b, "a.1" => 42, d: 42} |> Iteraptor.from_flatmap
+      %{a: [[:b], 42], d: 42}
+
       iex> %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42}
       ...> |> Iteraptor.from_flatmap
       %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
+
+      iex> %{"Struct1%field1.Struct2%field2.0.a" => 42, "Struct1%field1.Struct2%field2.1" => :b}
+      ...> |> Iteraptor.from_flatmap
+      %Struct1{field1: %Struct2{field2: [%{a: 42}, :b]}}
   """
   def from_flatmap(input, joiner \\ @joiner) when is_map(input) do
     unprocess(input, joiner)
@@ -157,20 +171,35 @@ defmodule Iteraptor do
   """
   def each(input, joiner \\ @joiner, fun) do
     unless is_function(fun, 1), do: raise "Function or arity fun/1 is required"
-    process(input, joiner, "", %{}, fun)
+    process(input, joiner, nil, "", %{}, fun)
   end
 
   ##############################################################################
 
-  defp process(input, joiner, prefix \\ "", acc \\ %{}, fun \\ nil)
+  defp process(input, joiner, type \\ nil, prefix \\ "", acc \\ %{}, fun \\ nil)
 
   ### -----------------------------------------------------------------------###
 
-  defp process(input, joiner, prefix, acc, fun) when is_map(input) do
+  defp process(input, joiner, nil, prefix, acc, fun) do
+    type = case Enumerable.impl_for(input) do
+             Enumerable.List -> if Keyword.keyword?(input), do: :keyword, else: :list
+             Enumerable.Map  -> :map
+             _               -> if is_map(input), do: :struct, else: :unknown
+           end
+    process(input, joiner, type, prefix, acc, fun)
+  end
+
+  ### -----------------------------------------------------------------------###
+
+  defp process(_, _, :unknown, prefix, _, _) do
+    raise ArgumentError, message: "Unsupported data type found at prefix: #{prefix}"
+  end
+
+  defp process(input, joiner, :map, prefix, acc, fun) do
     input |> Enum.reduce(acc, fn({k, v}, memo) ->
       prefix = join(prefix, k, joiner)
       if is_map(v) or is_list(v) do
-        process(v, joiner, prefix, memo, fun)
+        process(v, joiner, nil, prefix, memo, fun)
       else
         unless is_nil(fun), do: fun.({prefix, v})
         Map.put memo, prefix, v
@@ -178,16 +207,28 @@ defmodule Iteraptor do
     end)
   end
 
-  defp process(input, joiner, prefix, acc, fun) when is_list(input) do
-    if Keyword.keyword?(input) do
-      input |> Enum.into(%{}) |> process(joiner, prefix, acc, fun)
-    else
-      input
-        |> Enum.with_index
-        |> Enum.map(fn({k, v}) -> {v, k} end)
-        |> Enum.into(%{})
-        |> process(joiner, prefix, acc, fun)
-    end
+  defp process(input, joiner, :keyword, prefix, acc, fun) do
+    input |> Enum.into(%{}) |> process(joiner, nil, prefix, acc, fun)
+  end
+
+  defp process(input, joiner, :list, prefix, acc, fun) do
+    input
+      |> Enum.with_index
+      |> Enum.map(fn({k, v}) -> {v, k} end)
+      |> Enum.into(%{})
+      |> process(joiner, nil, prefix, acc, fun)
+  end
+
+  defp process(input, joiner, :struct, prefix, acc, fun) do
+    struct_name = input.__struct__ |> inspect |> String.replace(".", @struct_joiner)
+    input
+      |> Map.keys
+      |> Enum.filter(fn e -> e != :__struct__ end)
+      |> Enum.map(fn e ->
+           { "#{struct_name}%#{e}", get_in(input, [Access.key!(e)]) }
+         end)
+      |> Enum.into(%{})
+      |> process(joiner, nil, prefix, acc, fun)
   end
 
   ##############################################################################
@@ -279,6 +320,16 @@ defmodule Iteraptor do
       |> Enum.sort) == (0..Enum.count(input) - 1 |> Enum.to_list)
   end
 
+  defp is_struct(input) when is_map(input) do
+    input |> Enum.reduce(nil, fn {k, v}, acc ->
+      case k |> to_string |> String.split(~r{#{@struct_joiner}(?=[^#{@struct_joiner}]*$)}) do
+        [^acc, _] -> acc
+        [struct_name, _] -> if acc == nil, do: struct_name, else: false
+        _ -> false
+      end
+    end)
+  end
+
   defp imply_lists(input, joiner) when is_map(input) do
     if quacks_as_list(input, joiner) do
       sorted = input
@@ -289,9 +340,14 @@ defmodule Iteraptor do
         if is_map(v), do: imply_lists(v, joiner), else: v
       end
     else
-      Enum.into(for {k, v} <- input do
-        {k, (if is_map(v), do: imply_lists(v, joiner), else: v)}
-      end, %{})
+      target = case is_struct(input) do
+                 false -> %{}
+                 name  -> struct(Module.concat(Elixir, name |> to_string |> String.replace(@struct_joiner, ".")))
+               end
+      input |> Enum.reduce(target, fn {k, v}, acc ->
+        key = join(~r{.*#{@struct_joiner}} |> Regex.replace(to_string(k), ""))
+        acc |> Map.put(join(key), (if is_map(v), do: imply_lists(v, joiner), else: v))
+      end)
     end
   end
 end
