@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/am-kantox/elixir-iteraptor.svg?branch=master)](https://travis-ci.org/am-kantox/elixir-iteraptor)
 [![Inline docs](http://inch-ci.org/github/am-kantox/elixir-iteraptor.svg)](http://inch-ci.org/github/am-kantox/elixir-iteraptor)
 [![Deps Status](https://beta.hexfaktor.org/badge/all/github/am-kantox/elixir-iteraptor.svg)](https://beta.hexfaktor.org/github/am-kantox/elixir-iteraptor)
-[![Hex.pm](https://img.shields.io/hexpm/v/plug.svg?maxAge=2592000)](https://hex.pm/packages/iteraptor)
+[![Hex.pm](https://img.shields.io/hexpm/v/plug.svg)](https://hex.pm/packages/iteraptor)
 
 ### Handy enumerable operations
 
