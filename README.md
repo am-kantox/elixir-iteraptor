@@ -24,7 +24,7 @@
 
     ```elixir
     def deps do
-      [{:iteraptor, "~> 0.5.3"}]
+      [{:iteraptor, "~> 0.6.0"}]
     end
     ```
 
