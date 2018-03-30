@@ -4,7 +4,7 @@ defmodule Iteraptor.Mixfile do
   def project do
     [app: :iteraptor,
      version: File.read!(Path.join("config", "VERSION")),
-     elixir: "~> 1.3",
+     elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      description: description(),
@@ -32,7 +32,7 @@ defmodule Iteraptor.Mixfile do
     [
       {:issuer, "~> 0.1", only: :dev},
 
-      {:credo, "~> 0.4", only: [:dev, :test]},
+      {:credo, "~> 0.8", only: [:dev, :test]},
       {:ex_doc, "~> 0.11", only: :dev},
       {:inch_ex, "~> 0.0", only: :docs}
     ]
