@@ -144,8 +144,8 @@ defmodule Iteraptor do
       ...> |> Iteraptor.from_flatmap
       %Struct1{field1: %Struct2{field2: [%{a: 42}, :b]}}
   """
-  def from_flatmap(input, joiner \\ @joiner) when is_map(input) do
-    unprocess(input, joiner)
+  def from_flatmap(input, fun \\ nil, opts \\ []) when is_map(input) do
+    unprocess(input, fun, opts)
   end
 
   @doc """
@@ -198,7 +198,7 @@ defmodule Iteraptor do
   defp joiner(opts), do: opts[:joiner] || @joiner
   defp struct_joiner(opts), do: opts[:struct_joiner] || @struct_joiner
 
-  defp process(input, type \\ :unknown, acc_key_fun, opts \\ [])
+  defp process(input, type, acc_key_fun, opts)
 
   ### -----------------------------------------------------------------------###
 
@@ -260,16 +260,16 @@ defmodule Iteraptor do
 
   ##############################################################################
 
-  defp unprocess(input, joiner, fun \\ nil)
+  defp unprocess(input, fun, opts)
 
   ### -----------------------------------------------------------------------###
 
-  defp unprocess(input, joiner, fun) when is_map(input) do
+  defp unprocess(input, fun, opts) when is_map(input) do
     input
-      |> Enum.reduce(%{}, fn({key, value}, acc) ->
-        put_or_update(acc, joiner, key, value, fun)
-      end)
-      |> imply_lists(joiner)
+    |> Enum.reduce(%{}, fn({key, value}, acc) ->
+      put_or_update(acc, key, value, fun, opts)
+    end)
+    |> imply_lists(joiner(opts))
   end
 
   ##############################################################################
@@ -295,24 +295,20 @@ defmodule Iteraptor do
 
   ##############################################################################
 
-  defp put_or_update(input, joiner, prefix, value, fun, path \\ "") when is_map(input) do
-    case prefix |> to_string |> String.split(joiner, parts: 2) do
+  defp put_or_update(input, key, value, fun, opts, path \\ "") when is_map(input) do
+    case key |> to_string |> String.split(joiner(opts), parts: 2) do
       [key, rest] ->
         {_, target} = input |> Map.get_and_update(join(key), fn current ->
           old = case current do
             nil -> %{}
             _   -> current
           end
-          {current, old |> put_or_update(joiner, rest, value, fun, join(path, key, joiner))}
+          {current, old |> put_or_update(rest, value, fun, opts, join(path, key, joiner(opts)))}
         end)
         target
       [key] ->
         unless is_nil(fun), do: fun.({path, value})
-
-        case input do
-          input when is_map(input) ->  input |> Map.put(join(key), value)
-          input when is_list(input) ->  input ++ [value]
-        end
+        Map.put(input, join(key), value)
     end
   end
 
@@ -340,10 +336,10 @@ defmodule Iteraptor do
   defp quacks_as_list(input, joiner, prefix \\ "") do
     input = input |> Map.keys |> filter_keys(prefix)
     (input
-      |> Enum.map(fn k ->
-        k |> parse_key(joiner, prefix)
-      end)
-      |> Enum.sort) == (0..Enum.count(input) - 1 |> Enum.to_list)
+    |> Enum.map(fn k ->
+      k |> parse_key(joiner, prefix)
+    end)
+    |> Enum.sort) == (0..Enum.count(input) - 1 |> Enum.to_list)
   end
 
   defp is_struct(input) when is_map(input) do
