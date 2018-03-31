@@ -93,8 +93,8 @@ defmodule Iteraptor do
       %{"Struct1%field1.Struct2%field2.0.a" => 42, "Struct1%field1.Struct2%field2.1" => :b}
   """
 
-  def to_flatmap(input, joiner \\ @joiner) when is_map(input) or is_list(input) do
-    process(input, joiner)
+  def to_flatmap(input, opts \\ []) when is_map(input) or is_list(input) do
+    process(input, :unknown, {%{}, "", nil}, opts)
   end
 
   @doc """
@@ -169,9 +169,9 @@ defmodule Iteraptor do
       iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
       %{"a.b.c" => 42}
   """
-  def each(input, joiner \\ @joiner, fun) do
+  def each(input, fun, opts \\ []) do
     unless is_function(fun, 1), do: raise "Function or arity fun/1 is required"
-    process(input, joiner, nil, "", %{}, fun)
+    process(input, :unknown, {%{}, "", fun}, opts)
   end
 
   @doc ~S"""
@@ -195,51 +195,59 @@ defmodule Iteraptor do
 
   ##############################################################################
 
-  defp process(input, joiner, type \\ nil, prefix \\ "", acc \\ %{}, fun \\ nil)
+  defp joiner(opts), do: opts[:joiner] || @joiner
+  defp struct_joiner(opts), do: opts[:struct_joiner] || @struct_joiner
+
+  defp process(input, type \\ :unknown, acc_key_fun, opts \\ [])
 
   ### -----------------------------------------------------------------------###
 
-  defp process(input, joiner, nil, prefix, acc, fun) do
+  defp process(_, _, _, opts) when not is_list(opts),
+    do: raise ArgumentError, message: "Options must be a keyword list: #{opts.inspect}"
+
+  defp process(input, :unknown, {acc, key, fun}, opts) do
     type = case Enumerable.impl_for(input) do
              Enumerable.List -> if Keyword.keyword?(input), do: :keyword, else: :list
              Enumerable.Map  -> :map
-             _               -> if is_map(input), do: :struct, else: :unknown
+             _               -> if is_map(input), do: :struct, else: :invalid
            end
-    process(input, joiner, type, prefix, acc, fun)
+    process(input, type, {acc, key, fun}, opts)
   end
 
   ### -----------------------------------------------------------------------###
 
-  defp process(_, _, :unknown, prefix, _, _) do
-    raise ArgumentError, message: "Unsupported data type found at prefix: #{prefix}"
-  end
+  defp process(_, :invalid, {_, key, _}, _),
+    do: raise ArgumentError, message: "Unsupported data type found at prefix: #{key}"
 
-  defp process(input, joiner, :map, prefix, acc, fun) do
-    input |> Enum.reduce(acc, fn({k, v}, memo) ->
-      prefix = join(prefix, k, joiner)
-      if is_map(v) or is_list(v) do
-        process(v, joiner, nil, prefix, memo, fun)
-      else
-        unless is_nil(fun), do: fun.({prefix, v})
-        Map.put memo, prefix, v
-      end
+  defp process(input, :map, {acc, key, fun}, opts) do
+    input
+    |> Enum.reduce(acc, fn({k, v}, memo) ->
+        key = join(key, k, joiner(opts)) # FIXME JOIN
+        if is_map(v) or is_list(v) do
+          process(v, :unknown, {memo, key, fun}, opts)
+        else
+          unless is_nil(fun), do: fun.({key, v})
+          Map.put(memo, key, v)
+        end
     end)
   end
 
-  defp process(input, joiner, :keyword, prefix, acc, fun) do
-    input |> Enum.into(%{}) |> process(joiner, nil, prefix, acc, fun)
-  end
-
-  defp process(input, joiner, :list, prefix, acc, fun) do
+  defp process(input, :keyword, {acc, key, fun}, opts) do
     input
-      |> Enum.with_index
-      |> Enum.map(fn({k, v}) -> {v, k} end)
-      |> Enum.into(%{})
-      |> process(joiner, nil, prefix, acc, fun)
+    |> Enum.into(%{})
+    |> process(:map, {acc, key, fun}, opts) # FIXME BREAKS KW
   end
 
-  defp process(input, joiner, :struct, prefix, acc, fun) do
-    struct_name = input.__struct__ |> inspect |> String.replace(".", @struct_joiner)
+  defp process(input, :list, {acc, key, fun}, opts) do
+    input
+    |> Enum.with_index
+    |> Enum.map(fn({k, v}) -> {v, k} end)
+    |> Enum.into(%{})
+    |> process(:map, {acc, key, fun}, opts)
+  end
+
+  defp process(input, :struct, {acc, key, fun}, opts) do
+    struct_name = input.__struct__ |> inspect |> String.replace(".", struct_joiner(opts))
     input
       |> Map.keys
       |> Enum.filter(fn e -> e != :__struct__ end)
@@ -247,7 +255,7 @@ defmodule Iteraptor do
            {"#{struct_name}%#{e}", get_in(input, [Access.key!(e)])}
          end)
       |> Enum.into(%{})
-      |> process(joiner, nil, prefix, acc, fun)
+      |> process(:map, {acc, key, fun}, opts)
   end
 
   ##############################################################################

@@ -4,7 +4,6 @@ defmodule Iteraptor.IteraptableTest do
   import ExUnit.CaptureLog
   doctest Iteraptor.Iteraptable
 
-
 # defmodule Iteraptor.Struct do
 #   @fields [field: nil]
 #
