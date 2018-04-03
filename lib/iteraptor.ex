@@ -95,7 +95,7 @@ defmodule Iteraptor do
   """
 
   def to_flatmap(input, opts \\ []) when is_map(input) or is_list(input) do
-    process(input, :unknown, {%{}, "", nil}, opts)
+    process(input, :unknown, {into(opts), nil, nil}, opts)
   end
 
   @doc """
@@ -146,7 +146,10 @@ defmodule Iteraptor do
       %Struct1{field1: %Struct2{field2: [%{a: 42}, :b]}}
   """
   def from_flatmap(input, fun \\ nil, opts \\ []) when is_map(input) do
-    unprocess(input, fun, opts)
+    input
+    |> unprocess(fun, opts)
+    |> fix(opts)
+    |> maybe_make_list(opts)
   end
 
   @doc """
@@ -184,6 +187,20 @@ defmodule Iteraptor do
     input
   end
 
+  def map(input, fun, opts \\ []) do
+    unless is_function(fun, 1), do: raise "Function or arity fun/1 is required"
+
+    result = process(input, :unknown, {nil, nil, fun}, opts)
+    if opts[:full_parent], do: result, else: from_flatmap(result)
+    # |> fix(opts)
+  end
+
+  defp fix(input, opts) do
+    opts = Keyword.merge(opts, yield_all: true, collapse_lists: true, full_parent: true)
+    fun = fn {k, v} -> {k, maybe_make_list(v, opts)} end
+    process(input, :unknown, {nil, nil, fun}, opts)
+  end
+
   ##############################################################################
 
   defp process(input, type, acc_key_fun, opts)
@@ -205,19 +222,33 @@ defmodule Iteraptor do
   defp process(input, type, {acc, key, fun}, opts) when type in [Map, Keyword] do
     input
     |> Enum.reduce(acc, fn({k, v}, memo) ->
-        key = safe_join(key, k, opts) # FIXME JOIN
-        if is_map(v) or is_list(v) do
+        key = safe_join(key, k, opts)
+        {_, value} =
+          case {fun, opts[:yield_all] || (!is_map(v) && !is_list(v))} do
+            {f, true} when is_function(f, 1) ->
+              original_key =
+                if opts[:full_parent] == :tuple, do: List.to_tuple(key), else: key
+              case f.({original_key, v}) do
+                {^original_key, value} -> {key, value}
+                {key, value} -> {key, value}
+                value -> {key, value}
+              end
+            _ -> {key, v}
+          end
+
+        is_iterateble_list =
+          is_list(value) and (is_nil(opts[:collapse_lists]) or is_tuple(hd(value)))
+
+        if (is_map(value) or is_iterateble_list) do
           memo =
             if opts[:full_parent] do
               with {_, instance} <- type(input), do: safe_put_in(memo, key, instance)
             else
               memo
             end
-          process(v, :unknown, {memo, key, fun}, opts)
+          process(value, :unknown, {memo, key, fun}, opts)
         else
-          unless is_nil(fun),
-            do: fun.({(if opts[:full_parent] == :tuple, do: List.to_tuple(key), else: key), v})
-          safe_put_in(memo, key, v)
+          safe_put_in(memo, key, value)
         end
     end)
   end
@@ -251,10 +282,8 @@ defmodule Iteraptor do
   defp unprocess(input, fun, opts) when is_map(input) or is_list(input) do
     input
     |> shave_off(fun, opts)
-    |> IO.inspect(label: "SHAVED")
     |> squeeze(opts)
-    |> IO.inspect(label: "SQUEEZED")
-    |> maybe_make_list(opts)
+    # |> fix(opts)
   end
 
   ##############################################################################
@@ -346,6 +375,7 @@ defmodule Iteraptor do
 
   def squeeze(input, opts) do
     instance = into(opts)
+
     input
     |> Enum.reduce(instance, fn kv, acc ->
          {:ok, {deep_key, value}} = dig([kv])
@@ -379,6 +409,7 @@ defmodule Iteraptor do
       input
     end
   end
+  defp maybe_make_list(input, _), do: input
 
   defp shave_off(input, fun, opts) when is_map(input) or is_list(input) do
     # level =
@@ -436,7 +467,11 @@ defmodule Iteraptor do
   defp quacks_as_list(input, joiner, prefix \\ "") do
     input =
       input
-      |> Enum.map(fn {k, _v} -> to_string(k) end)
+      |> IO.inspect(label: "★★★")
+      |> Enum.map(fn
+           {k, _v} -> to_string(k)
+           v -> v
+         end)
       |> filter_keys(prefix)
       |> Enum.map(& parse_key(&1, joiner, prefix))
       |> Enum.uniq()
