@@ -148,6 +148,7 @@ defmodule Iteraptor do
   def from_flatmap(input, fun \\ nil, opts \\ []) when is_map(input) do
     input
     |> unprocess(fun, opts)
+    |> IO.inspect(label: "⚐")
     |> fix(opts)
     |> maybe_make_list(opts)
   end
@@ -208,10 +209,10 @@ defmodule Iteraptor do
   ### -----------------------------------------------------------------------###
 
   defp process(_, _, _, opts) when not is_list(opts),
-    do: raise ArgumentError, message: "Options must be a keyword list: #{opts.inspect}"
+    do: raise ArgumentError, message: "Options must be a keyword list: #{inspect opts}"
 
   defp process(_, :invalid, {_, key, _}, _),
-    do: raise ArgumentError, message: "Unsupported data type found at prefix: #{key}"
+    do: raise ArgumentError, message: "Unsupported data type found at prefix: #{inspect key}"
 
   defp process(input, :unknown, {acc, key, fun}, opts) do
     {type, instance} = type(input, acc)
@@ -236,10 +237,7 @@ defmodule Iteraptor do
             _ -> {key, v}
           end
 
-        is_iterateble_list =
-          is_list(value) and (is_nil(opts[:collapse_lists]) or is_tuple(hd(value)))
-
-        if (is_map(value) or is_iterateble_list) do
+        if is_map(value) or is_list(value) do
           memo =
             if opts[:full_parent] do
               with {_, instance} <- type(input), do: safe_put_in(memo, key, instance)
@@ -254,11 +252,31 @@ defmodule Iteraptor do
   end
 
   defp process(input, List, {acc, key, fun}, opts) do
-    input
-    |> Enum.with_index
-    |> Enum.map(fn({k, v}) -> {v, k} end)
-    |> Enum.into(into(opts))
-    |> process(Map, {acc, key, fun}, opts)
+    if opts[:collapse_lists] do
+      value =
+        input
+        |> Enum.map(fn v ->
+             case type(v) do
+              {:invalid, _} ->
+                safe_put_in(acc, key, v)
+                |> IO.inspect(label: "⚑0")
+              {type, instance} ->
+                acc = safe_put_in(acc, key, instance)
+                v
+                |> IO.inspect(label: "⚑1")
+                |> process(type, {acc, key, fun}, opts)
+                |> IO.inspect(label: "⚑2")
+             end
+           end)
+        |> maybe_make_list(opts)
+      safe_put_in(acc, key, value)
+    else
+      input
+      |> Enum.with_index()
+      |> Enum.map(fn {k, idx} -> {idx, k} end)
+      |> Enum.into(into(opts))
+      |> process(Map, {acc, key, fun}, opts)
+    end
   end
 
   defp process(input, :struct, {acc, key, fun}, opts) do
@@ -369,6 +387,9 @@ defmodule Iteraptor do
       _ -> {:error, input}
     end
   end
+  def dig([input], acc) when is_map(input) and map_size(input) == 1,
+    do: dig(input, acc)
+    # do: dig(input |> Map.to_list(), acc)
   def dig([{k, v}], acc), do: dig(v, [k | acc])
   def dig(input, _) when is_list(input), do: {:error, input}
   def dig(input, acc), do: {:ok, {:lists.reverse(acc), input}}
@@ -378,8 +399,9 @@ defmodule Iteraptor do
 
     input
     |> Enum.reduce(instance, fn kv, acc ->
-         {:ok, {deep_key, value}} = dig([kv])
-         {key, acc} =
+        IO.inspect(kv, label: "▶")
+        {:ok, {deep_key, value}} = dig([kv])
+        {key, acc} =
           Enum.reduce(deep_key, {[], acc}, fn k, {key, acc} ->
             key = key ++ [k]
             acc =
@@ -389,24 +411,42 @@ defmodule Iteraptor do
               end
             {key, acc}
           end)
-         put_in(acc, key, value)
-       end)
+        put_in(acc, key, value)
+      end)
   end
 
   defp maybe_make_list(input, opts) when is_list(input) or is_map(input) do
-    if quacks_as_list(input, joiner(opts)) do
+    is_squeezable_map =
+      is_list(input) &&
+
       input
-      |> Enum.map(& key_splitter(&1, opts))
-      |> Enum.chunk_by(fn {key, _, _} -> key end)
-      |> Enum.sort_by(fn [{key, _, _} | _] ->
-          key |> to_string() |> String.to_integer()
+      |> Enum.flat_map(fn
+           map when is_map(map) -> Map.keys(map)
+           _ -> []
+         end)
+      |> Enum.uniq()
+      |> Enum.count() == 1
+
+    cond do
+      is_squeezable_map ->
+        Enum.map(input, fn
+          map when is_map(map) -> map |> Map.values() |> hd()
+          _ -> []
         end)
-      |> Enum.map(fn
-          [{_, [], value}] -> value
-          list -> Enum.map(list, fn {_, key, value} -> {key, value} end)
-      end)
-    else
-      input
+
+      quacks_as_list(input, joiner(opts)) ->
+        input
+        |> Enum.map(& key_splitter(&1, opts))
+        |> Enum.chunk_by(fn {key, _, _} -> key end)
+        |> Enum.sort_by(fn [{key, _, _} | _] ->
+            key |> to_string() |> String.to_integer()
+          end)
+        |> Enum.map(fn
+            [{_, [], value}] -> value
+            list -> Enum.map(list, fn {_, key, value} -> {key, value} end)
+        end)
+
+      true -> input
     end
   end
   defp maybe_make_list(input, _), do: input
@@ -465,9 +505,9 @@ defmodule Iteraptor do
   end
 
   defp quacks_as_list(input, joiner, prefix \\ "") do
+    IO.inspect(input, label: "★★★")
     input =
       input
-      |> IO.inspect(label: "★★★")
       |> Enum.map(fn
            {k, _v} -> to_string(k)
            v -> v
