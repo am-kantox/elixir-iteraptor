@@ -73,4 +73,11 @@ defmodule Iteraptor.Test do
     assert result =~ "{\"a2.a4.a6.a8\", 42}"
   end
 
+  test "map[:full_parent] / each returns the original map" do
+    Enum.each([{@nest, :tuple}, {@list, nil}], fn {input, full_parent} ->
+      assert(input == Iteraptor.each(input, fn _ -> :ok end, full_parent: full_parent))
+    end)
+  end
+
+
 end

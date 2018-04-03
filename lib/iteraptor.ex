@@ -33,10 +33,9 @@ defmodule Iteraptor do
 
   """
 
+  @into %{}
   @joiner "."
   @struct_joiner "%"
-
-  defguard is_key_value(type) when type in ~w|map keyword|a
 
   @doc """
   Build a flatmap out of nested structure, concatenating the names of keys.
@@ -160,20 +159,29 @@ defmodule Iteraptor do
   ## Parameters
 
   - `input`:  nested map/list/keyword to be walked through.
-  - `joiner`: the character to be used to join keys while flattening,
-  is returned to the callback as iterated key name;
-  _optional_, default value is `"."`;
   - `fun`:    callback to be called on each _value_;
-  e.g. on `%{a: {b: 42}}` will be called once, with tuple `{"a.b", 42}`.
+  e.g. on `%{a: {b: 42}}` will be called once, with tuple `{"a.b", 42}`;
+  - `opts`: the options to be passed to the iteration
+    - `joiner`: the character to be used to join keys while flattening,
+      is returned to the callback as iterated key name;
+      _optional_, default value is `"."`;
 
   ## Examples
 
-      iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
-      %{"a.b.c" => 42}
+      iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end)
+      {"a.b.c", 42}
+      %{a: %{b: %{c: 42}}}
+
+      iex> %{a: %{b: %{c: 42}}}
+      ...> |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end, full_parent: :tuple)
+      {{:a, :b, :c}, 42}
+      %{a: %{b: %{c: 42}}}
   """
   def each(input, fun, opts \\ []) do
     unless is_function(fun, 1), do: raise "Function or arity fun/1 is required"
+
     process(input, :unknown, {nil, nil, fun}, opts)
+    input
   end
 
   ##############################################################################
@@ -194,7 +202,7 @@ defmodule Iteraptor do
     process(input, type, {instance, key, fun}, opts)
   end
 
-  defp process(input, type, {acc, key, fun}, opts) when is_key_value(type) do
+  defp process(input, type, {acc, key, fun}, opts) when type in [Map, Keyword] do
     input
     |> Enum.reduce(acc, fn({k, v}, memo) ->
         key = safe_join(key, k, opts) # FIXME JOIN
@@ -214,24 +222,24 @@ defmodule Iteraptor do
     end)
   end
 
-  defp process(input, :list, {acc, key, fun}, opts) do
+  defp process(input, List, {acc, key, fun}, opts) do
     input
     |> Enum.with_index
     |> Enum.map(fn({k, v}) -> {v, k} end)
-    |> Enum.into(%{})
-    |> process(:map, {acc, key, fun}, opts)
+    |> Enum.into(into(opts))
+    |> process(Map, {acc, key, fun}, opts)
   end
 
   defp process(input, :struct, {acc, key, fun}, opts) do
     struct_name = input.__struct__ |> inspect |> String.replace(".", struct_joiner(opts))
     input
       |> Map.keys
-      |> Enum.filter(fn e -> e != :__struct__ end)
+      |> Enum.reject(& &1 == :__struct__)
       |> Enum.map(fn e ->
            {"#{struct_name}%#{e}", get_in(input, [Access.key!(e)])}
          end)
-      |> Enum.into(%{})
-      |> process(:map, {acc, key, fun}, opts)
+      |> Enum.into(into(opts))
+      |> process(Map, {acc, key, fun}, opts)
   end
 
   ##############################################################################
@@ -240,12 +248,13 @@ defmodule Iteraptor do
 
   ### -----------------------------------------------------------------------###
 
-  defp unprocess(input, fun, opts) when is_map(input) do
+  defp unprocess(input, fun, opts) when is_map(input) or is_list(input) do
     input
-    |> Enum.reduce(%{}, fn({key, value}, acc) ->
-      put_or_update(acc, key, value, fun, opts)
-    end)
-    |> imply_lists(joiner(opts))
+    |> shave_off(fun, opts)
+    |> IO.inspect(label: "SHAVED")
+    |> squeeze(opts)
+    |> IO.inspect(label: "SQUEEZED")
+    |> maybe_make_list(opts)
   end
 
   ##############################################################################
@@ -254,9 +263,9 @@ defmodule Iteraptor do
     {type, instance} =
       case Enumerable.impl_for(input) do
         Enumerable.List ->
-          {(if Keyword.keyword?(input), do: :keyword, else: :list), []}
+          {(if Keyword.keyword?(input), do: Keyword, else: List), []}
         Enumerable.Map ->
-          {:map, %{}}
+          {Map, %{}}
         _ ->
         # FIXME struct instantiation is potentially dangerous
           if is_map(input), do: {:struct, struct(input.__struct__)}, else: {:invalid, nil}
@@ -302,30 +311,110 @@ defmodule Iteraptor do
   def safe_put_in(memo, key, v) when is_list(memo), do: memo ++ [{key, v}]
   def safe_put_in(memo, key, v) when is_map(memo), do: Map.put(memo, key, v)
 
-  defp put_or_update(input, key, value, fun, opts, path \\ "") when is_map(input) do
-    case key |> to_string |> String.split(joiner(opts), parts: 2) do
-      [key, rest] ->
-        {_, target} = input |> Map.get_and_update(join(key), fn current ->
-          old = case current do
-            nil -> %{}
-            _   -> current
-          end
-          {current, old |> put_or_update(rest, value, fun, opts, join(path, key, joiner(opts)))}
+  defp key_splitter(value, opts)
+  defp key_splitter({[head | tail], value}, _opts), do: {head, tail, value}
+  defp key_splitter({key, value}, _opts) when is_tuple(key),
+    do: with [head | tail] <- Tuple.to_list(key), do: {head, tail, value}
+  defp key_splitter({key, value}, opts) when is_binary(key) do
+    [head | tail] = String.split(key, joiner(opts), parts: 2)
+    with {parsed_integer, ""} <- Integer.parse(head) do
+      {parsed_integer, tail, value}
+    else
+      _ -> {String.to_existing_atom(head), tail, value}
+    end
+  end
+  defp key_splitter({key, value}, opts) when is_atom(key) do
+    if key |> Atom.to_string() |> String.contains?(joiner(opts)) do
+      key_splitter({Atom.to_string(key), value}, opts)
+    else
+      {key, [], value}
+    end
+  end
+  defp key_splitter({key, value}, _opts), do: {key, [], value}
+
+  def dig(input, acc \\ [])
+  def dig(_, {:error, _} = error), do: error
+  def dig(input, acc) when is_map(input) do
+    case Map.keys(input) do
+      [k] -> dig(input[k], [k | acc])
+      _ -> {:error, input}
+    end
+  end
+  def dig([{k, v}], acc), do: dig(v, [k | acc])
+  def dig(input, _) when is_list(input), do: {:error, input}
+  def dig(input, acc), do: {:ok, {:lists.reverse(acc), input}}
+
+  def squeeze(input, opts) do
+    instance = into(opts)
+    input
+    |> Enum.reduce(instance, fn kv, acc ->
+         {:ok, {deep_key, value}} = dig([kv])
+         {key, acc} =
+          Enum.reduce(deep_key, {[], acc}, fn k, {key, acc} ->
+            key = key ++ [k]
+            acc =
+              case get_in(acc, key) do
+              nil -> put_in(acc, key, instance)
+              _ -> acc
+              end
+            {key, acc}
+          end)
+         put_in(acc, key, value)
+       end)
+  end
+
+  defp maybe_make_list(input, opts) when is_list(input) or is_map(input) do
+    if quacks_as_list(input, joiner(opts)) do
+      input
+      |> Enum.map(& key_splitter(&1, opts))
+      |> Enum.chunk_by(fn {key, _, _} -> key end)
+      |> Enum.sort_by(fn [{key, _, _} | _] ->
+          key |> to_string() |> String.to_integer()
         end)
-        target
-      [key] ->
-        unless is_nil(fun), do: fun.({path, value})
-        Map.put(input, join(key), value)
+      |> Enum.map(fn
+          [{_, [], value}] -> value
+          list -> Enum.map(list, fn {_, key, value} -> {key, value} end)
+      end)
+    else
+      input
     end
   end
 
+  defp shave_off(input, fun, opts) when is_map(input) or is_list(input) do
+    # level =
+    #  if quacks_as_list(input, joiner(opts)),
+    #    do: make_list(input, opts), else: input
+    # {_, acc} = type(input)
+    # |> Enum.into(acc)
+
+    input
+    |> Enum.with_index()
+    |> Enum.map(fn
+      {{k, v}, _} ->
+        {k, rest, v} = key_splitter({k, v}, opts)
+        unless is_nil(fun), do: fun.({k, v}) # FIXME
+        v =
+          case rest do
+            [] -> v
+            "" -> v
+            [key] -> %{key => v}
+          end
+        {k, shave_off(v, fun, opts)}
+      {v, idx} ->
+        unless is_nil(fun), do: fun.({idx, v}) # FIXME
+        shave_off(v, fun, opts)
+    end)
+  end
+  defp shave_off(input, _fun, _opts), do: input
+
   ##############################################################################
 
+  defp into(opts), do: opts[:into] || @into
   defp joiner(opts), do: opts[:joiner] || @joiner
 
   defp struct_joiner(opts), do: opts[:struct_joiner] || @struct_joiner
 
-  defp parse_key(key, joiner, prefix) do
+  defp parse_key(key, joiner, prefix \\ "") do
     k = key
         |> to_string
         |> String.split(joiner)
@@ -345,12 +434,14 @@ defmodule Iteraptor do
   end
 
   defp quacks_as_list(input, joiner, prefix \\ "") do
-    input = input |> Map.keys |> filter_keys(prefix)
-    (input
-    |> Enum.map(fn k ->
-      k |> parse_key(joiner, prefix)
-    end)
-    |> Enum.sort) == (0..Enum.count(input) - 1 |> Enum.to_list)
+    input =
+      input
+      |> Enum.map(fn {k, _v} -> to_string(k) end)
+      |> filter_keys(prefix)
+      |> Enum.map(& parse_key(&1, joiner, prefix))
+      |> Enum.uniq()
+      |> Enum.sort()
+    input == (0..Enum.count(input) - 1 |> Enum.to_list)
   end
 
   defp is_struct(input) when is_map(input) do
@@ -362,13 +453,14 @@ defmodule Iteraptor do
       end
     end)
   end
+  defp is_struct(_), do: false
 
-  defp imply_lists(input, joiner) when is_map(input) do
+  defp imply_lists(input, joiner) when is_map(input) or is_list(input) do
     if quacks_as_list(input, joiner) do
-      sorted = input
-        |> Enum.sort(fn ({k1, _}, {k2, _}) ->
-             String.to_integer(to_string(k1)) < String.to_integer(to_string(k2))
-           end)
+      sorted =
+        Enum.sort(input, fn ({k1, _}, {k2, _}) ->
+          parse_key(k1, joiner) < parse_key(k2, joiner)
+        end)
       for {_, v} <- sorted do
         if is_map(v), do: imply_lists(v, joiner), else: v
       end
