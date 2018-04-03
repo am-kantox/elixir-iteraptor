@@ -49,7 +49,7 @@ defmodule Iteraptor.Test do
       @list |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
     end)
 
-    assert result =~ "{:\"0\", :a1}"
+    assert result =~ "{0, :a1}"
     assert result =~ "{\"1.a2\", 42}"
     assert result =~ "{\"1.a3\", 3.1415}"
     assert result =~ "{\"1.a4.0\", :a5}"
@@ -57,7 +57,7 @@ defmodule Iteraptor.Test do
     assert result =~ "{\"1.a6.a7\", 42}"
     assert result =~ "{\"2.0\", :a8}"
     assert result =~ "{\"2.1\", :a9}"
-    assert result =~ "{:\"3\", :a10}"
+    assert result =~ "{3, :a10}"
   end
 
   test "keyword / each prints out the iterated values" do

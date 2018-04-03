@@ -56,7 +56,7 @@ defmodule Iteraptor do
   ## Examples
 
       iex> [:a, 42] |> Iteraptor.to_flatmap
-      %{"0": :a, "1": 42}
+      %{0 => :a, 1 => 42}
 
       iex> %{a: 42} |> Iteraptor.to_flatmap
       %{a: 42}
@@ -199,9 +199,13 @@ defmodule Iteraptor do
     |> Enum.reduce(acc, fn({k, v}, memo) ->
         key = safe_join(key, k, opts) # FIXME JOIN
         if is_map(v) or is_list(v) do
-          with {_, instance} <- type(input),
-               memo <- safe_put_in(memo, key, instance),
-            do: process(v, :unknown, {memo, key, fun}, opts)
+          memo =
+            if opts[:full_parent] do
+              with {_, instance} <- type(input), do: safe_put_in(memo, key, instance)
+            else
+              memo
+            end
+          process(v, :unknown, {memo, key, fun}, opts)
         else
           unless is_nil(fun),
             do: fun.({(if opts[:full_parent] == :tuple, do: List.to_tuple(key), else: key), v})
@@ -265,7 +269,7 @@ defmodule Iteraptor do
       {p, "", :joined} when is_nil(p) or p == [] or p == "" -> ""
       {p, "", _} when is_nil(p) or p == [] or p == "" -> []
       {_, "", _} -> parent
-      {p, _, :joined} when is_nil(p) or p == [] or p == "" -> to_string(key)
+      {p, _, :joined} when is_nil(p) or p == [] or p == "" -> key
       {p, _, _} when is_nil(p) or p == [] or p == "" -> [key]
       {_, _, :joined} -> join(parent, key, joiner(opts) )
       {_, _, _} -> parent ++ [key]
@@ -295,7 +299,7 @@ defmodule Iteraptor do
 
   def safe_put_in(memo, key, v) when is_list(key), do: put_in(memo, key, v)
   def safe_put_in(memo, key, v) when is_atom(key), do: put_in(memo, [key], v)
-  def safe_put_in(memo, key, v) when is_list(memo) and is_binary(key), do: memo ++ [{key, v}]
+  def safe_put_in(memo, key, v) when is_list(memo), do: memo ++ [{key, v}]
   def safe_put_in(memo, key, v) when is_map(memo), do: Map.put(memo, key, v)
 
   defp put_or_update(input, key, value, fun, opts, path \\ "") when is_map(input) do
