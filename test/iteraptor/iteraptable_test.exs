@@ -1,4 +1,4 @@
-defmodule Iteraptor.IteraptableTest do
+defmodule Iteraptor.Iteraptable.Test do
   use ExUnit.Case
   require Logger
   import ExUnit.CaptureLog

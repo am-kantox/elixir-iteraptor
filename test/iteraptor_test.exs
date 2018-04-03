@@ -1,4 +1,4 @@
-defmodule IteraptorTest do
+defmodule Iteraptor.Test do
   use ExUnit.Case
   require Logger
   import ExUnit.CaptureLog
@@ -30,6 +30,18 @@ defmodule IteraptorTest do
     assert result =~ "{\"keys.2\", \"3\"}"
     assert result =~ "{\"top.key\", 42}"
     assert result =~ "{\"top.subkey.key\", 3.1415}"
+  end
+
+  test "map[:full_parent] / each prints out the iterated values" do
+    result = capture_log(fn ->
+      @nest |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end, full_parent: :tuple)
+    end)
+
+    assert result =~ "{:keys, 0}, \"1\"}"
+    assert result =~ "{:keys, 1}, \"2\"}"
+    assert result =~ "{:keys, 2}, \"3\"}"
+    assert result =~ "{:top, :key}, 42}"
+    assert result =~ "{:top, :subkey, :key}, 3.1415}"
   end
 
   test "list / each prints out the iterated values" do

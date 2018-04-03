@@ -36,6 +36,8 @@ defmodule Iteraptor do
   @joiner "."
   @struct_joiner "%"
 
+  defguard is_key_value(type) when type in ~w|map keyword|a
+
   @doc """
   Build a flatmap out of nested structure, concatenating the names of keys.
 
@@ -171,32 +173,10 @@ defmodule Iteraptor do
   """
   def each(input, fun, opts \\ []) do
     unless is_function(fun, 1), do: raise "Function or arity fun/1 is required"
-    process(input, :unknown, {%{}, "", fun}, opts)
+    process(input, :unknown, {nil, nil, fun}, opts)
   end
 
-  @doc ~S"""
-    Behaves as `Enum.each_cons(n)` in ruby. Iterates the input producing the list of cons.
-    Gracefully stolen from https://groups.google.com/forum/#!topic/elixir-lang-core/LAK23vaJgvE
-
-  ## Examples
-
-      iex> 'letters' |> Iteraptor.each_cons
-      ['le', 'et', 'tt', 'te', 'er', 'rs']
-      iex> 'letters' |> Iteraptor.each_cons(4)
-      ['lett', 'ette', 'tter', 'ters']
-      iex> 1..6 |> Iteraptor.each_cons(4)
-      [[1,2,3,4], [2,3,4,5], [3,4,5,6]]
-  """
-  def each_cons(list, n \\ 2, acc \\ [])
-  def each_cons([], _, acc), do: acc
-  def each_cons(list, n, acc) when is_list(list) and length(list) < n, do: acc |> Enum.reverse
-  def each_cons(list = [_ | tail], n, acc), do: each_cons(tail, n, [Enum.take(list, n)|acc])
-  def each_cons(list, n, acc) when is_map(list), do: each_cons(list |> Enum.to_list, n, acc)
-
   ##############################################################################
-
-  defp joiner(opts), do: opts[:joiner] || @joiner
-  defp struct_joiner(opts), do: opts[:struct_joiner] || @struct_joiner
 
   defp process(input, type, acc_key_fun, opts)
 
@@ -205,37 +185,29 @@ defmodule Iteraptor do
   defp process(_, _, _, opts) when not is_list(opts),
     do: raise ArgumentError, message: "Options must be a keyword list: #{opts.inspect}"
 
-  defp process(input, :unknown, {acc, key, fun}, opts) do
-    type = case Enumerable.impl_for(input) do
-             Enumerable.List -> if Keyword.keyword?(input), do: :keyword, else: :list
-             Enumerable.Map  -> :map
-             _               -> if is_map(input), do: :struct, else: :invalid
-           end
-    process(input, type, {acc, key, fun}, opts)
-  end
-
-  ### -----------------------------------------------------------------------###
-
   defp process(_, :invalid, {_, key, _}, _),
     do: raise ArgumentError, message: "Unsupported data type found at prefix: #{key}"
 
-  defp process(input, :map, {acc, key, fun}, opts) do
-    input
-    |> Enum.reduce(acc, fn({k, v}, memo) ->
-        key = join(key, k, joiner(opts)) # FIXME JOIN
-        if is_map(v) or is_list(v) do
-          process(v, :unknown, {memo, key, fun}, opts)
-        else
-          unless is_nil(fun), do: fun.({key, v})
-          Map.put(memo, key, v)
-        end
-    end)
+  defp process(input, :unknown, {acc, key, fun}, opts) do
+    {type, instance} = type(input, acc)
+    key = safe_join(key, nil, opts)
+    process(input, type, {instance, key, fun}, opts)
   end
 
-  defp process(input, :keyword, {acc, key, fun}, opts) do
+  defp process(input, type, {acc, key, fun}, opts) when is_key_value(type) do
     input
-    |> Enum.into(%{})
-    |> process(:map, {acc, key, fun}, opts) # FIXME BREAKS KW
+    |> Enum.reduce(acc, fn({k, v}, memo) ->
+        key = safe_join(key, k, opts) # FIXME JOIN
+        if is_map(v) or is_list(v) do
+          with {_, instance} <- type(input),
+               memo <- safe_put_in(memo, key, instance),
+            do: process(v, :unknown, {memo, key, fun}, opts)
+        else
+          unless is_nil(fun),
+            do: fun.({(if opts[:full_parent] == :tuple, do: List.to_tuple(key), else: key), v})
+          safe_put_in(memo, key, v)
+        end
+    end)
   end
 
   defp process(input, :list, {acc, key, fun}, opts) do
@@ -274,6 +246,32 @@ defmodule Iteraptor do
 
   ##############################################################################
 
+  defp type(input, default \\ nil) do
+    {type, instance} =
+      case Enumerable.impl_for(input) do
+        Enumerable.List ->
+          {(if Keyword.keyword?(input), do: :keyword, else: :list), []}
+        Enumerable.Map ->
+          {:map, %{}}
+        _ ->
+        # FIXME struct instantiation is potentially dangerous
+          if is_map(input), do: {:struct, struct(input.__struct__)}, else: {:invalid, nil}
+      end
+    {type, default || instance}
+  end
+
+  defp safe_join(parent, key, opts) when not is_list(key) do
+    case {parent, to_string(key), opts[:full_parent] || :joined} do
+      {p, "", :joined} when is_nil(p) or p == [] or p == "" -> ""
+      {p, "", _} when is_nil(p) or p == [] or p == "" -> []
+      {_, "", _} -> parent
+      {p, _, :joined} when is_nil(p) or p == [] or p == "" -> to_string(key)
+      {p, _, _} when is_nil(p) or p == [] or p == "" -> [key]
+      {_, _, :joined} -> join(parent, key, joiner(opts) )
+      {_, _, _} -> parent ++ [key]
+    end
+  end
+
   defp join(l, r \\ "", joiner \\ @joiner)
 
   defp join(l, "", joiner) do
@@ -295,6 +293,11 @@ defmodule Iteraptor do
 
   ##############################################################################
 
+  def safe_put_in(memo, key, v) when is_list(key), do: put_in(memo, key, v)
+  def safe_put_in(memo, key, v) when is_atom(key), do: put_in(memo, [key], v)
+  def safe_put_in(memo, key, v) when is_list(memo) and is_binary(key), do: memo ++ [{key, v}]
+  def safe_put_in(memo, key, v) when is_map(memo), do: Map.put(memo, key, v)
+
   defp put_or_update(input, key, value, fun, opts, path \\ "") when is_map(input) do
     case key |> to_string |> String.split(joiner(opts), parts: 2) do
       [key, rest] ->
@@ -313,6 +316,10 @@ defmodule Iteraptor do
   end
 
   ##############################################################################
+
+  defp joiner(opts), do: opts[:joiner] || @joiner
+
+  defp struct_joiner(opts), do: opts[:struct_joiner] || @struct_joiner
 
   defp parse_key(key, joiner, prefix) do
     k = key
