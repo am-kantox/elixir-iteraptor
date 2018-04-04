@@ -106,13 +106,6 @@ defmodule Iteraptor.Iteraptable do
 
   - `opts`: `Keyword` that currently might consist of `skip: collectable`
   to make `Iteraptor` to implement `Enumerable` protocol _only_
-
-  ## Examples
-
-      iex> %Iteraptor.Struct{field: 42}
-      ...>   |> Enum.map(fn {k, v} -> {k, v * 2} end)
-      ...>   |> Enum.into(%Iteraptor.Struct{})
-      %Iteraptor.Struct{field: 84}
   """
   defmacro __using__(opts \\ []) do
     Enum.reduce(~w|enumerable collectable access|a, [], fn type, acc ->
