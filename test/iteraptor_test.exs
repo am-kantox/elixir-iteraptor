@@ -25,23 +25,23 @@ defmodule Iteraptor.Test do
       @nest |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
     end)
 
-    assert result =~ "{\"keys.0\", \"1\"}"
-    assert result =~ "{\"keys.1\", \"2\"}"
-    assert result =~ "{\"keys.2\", \"3\"}"
-    assert result =~ "{\"top.key\", 42}"
-    assert result =~ "{\"top.subkey.key\", 3.1415}"
+    assert result =~ "{[:keys, 0], \"1\"}"
+    assert result =~ "{[:keys, 1], \"2\"}"
+    assert result =~ "{[:keys, 2], \"3\"}"
+    assert result =~ "{[:top, :key], 42}"
+    assert result =~ "{[:top, :subkey, :key], 3.1415}"
   end
 
   test "map[:full_parent] / each prints out the iterated values" do
     result = capture_log(fn ->
-      @nest |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end, full_parent: :tuple)
+      @nest |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
     end)
 
-    assert result =~ "{:keys, 0}, \"1\"}"
-    assert result =~ "{:keys, 1}, \"2\"}"
-    assert result =~ "{:keys, 2}, \"3\"}"
-    assert result =~ "{:top, :key}, 42}"
-    assert result =~ "{:top, :subkey, :key}, 3.1415}"
+    assert result =~ "[:keys, 0], \"1\"}"
+    assert result =~ "[:keys, 1], \"2\"}"
+    assert result =~ "[:keys, 2], \"3\"}"
+    assert result =~ "[:top, :key], 42}"
+    assert result =~ "[:top, :subkey, :key], 3.1415}"
   end
 
   test "list / each prints out the iterated values" do
@@ -49,15 +49,15 @@ defmodule Iteraptor.Test do
       @list |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
     end)
 
-    assert result =~ "{0, :a1}"
-    assert result =~ "{\"1.a2\", 42}"
-    assert result =~ "{\"1.a3\", 3.1415}"
-    assert result =~ "{\"1.a4.0\", :a5}"
-    assert result =~ "{\"1.a4.1\", true}"
-    assert result =~ "{\"1.a6.a7\", 42}"
-    assert result =~ "{\"2.0\", :a8}"
-    assert result =~ "{\"2.1\", :a9}"
-    assert result =~ "{3, :a10}"
+    assert result =~ "{[0], :a1}"
+    assert result =~ "{[1, :a2], 42}"
+    assert result =~ "{[1, :a3], 3.1415}"
+    assert result =~ "{[1, :a4, 0], :a5}"
+    assert result =~ "{[1, :a4, 1], true}"
+    assert result =~ "{[1, :a6, :a7], 42}"
+    assert result =~ "{[2, 0], :a8}"
+    assert result =~ "{[2, 1], :a9}"
+    assert result =~ "{[3], :a10}"
   end
 
   test "keyword / each prints out the iterated values" do
@@ -65,12 +65,12 @@ defmodule Iteraptor.Test do
       @keyword |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
     end)
 
-    assert result =~ "{:a1, 42}"
-    assert result =~ "{\"a2.a3\", 42}"
-    assert result =~ "{\"a2.a4.a5\", 42}"
-    assert result =~ "{\"a2.a4.a6.a7\", 42}"
-    assert result =~ "{\"a2.a4.a6.a7\", 3.14}"
-    assert result =~ "{\"a2.a4.a6.a8\", 42}"
+    assert result =~ "{[:a1], 42}"
+    assert result =~ "{[:a2, :a3], 42}"
+    assert result =~ "{[:a2, :a4, :a5], 42}"
+    assert result =~ "{[:a2, :a4, :a6, :a7], 42}"
+    assert result =~ "{[:a2, :a4, :a6, :a7], 3.14}"
+    assert result =~ "{[:a2, :a4, :a6, :a8], 42}"
   end
 
   test "map[:full_parent] / each returns the original map" do

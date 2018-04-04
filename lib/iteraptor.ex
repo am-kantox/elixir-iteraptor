@@ -97,7 +97,12 @@ defmodule Iteraptor do
   def to_flatmap(input, opts \\ []) when is_map(input) or is_list(input) do
     reducer =
       fn {k, v}, acc ->
-        Map.put(acc, Enum.join(k, delimiter(opts)), v)
+        key =
+          case k do
+            [key] -> key
+            _ -> Enum.join(k, delimiter(opts))
+          end
+        Map.put(acc, key, v)
       end
     with {_, flattened} <- reduce(input, %{}, reducer, opts), do: flattened
   end
@@ -150,8 +155,19 @@ defmodule Iteraptor do
       %Struct1{field1: %Struct2{field2: [%{a: 42}, :b]}}
   """
   def from_flatmap(input, fun \\ nil, opts \\ []) when is_map(input) do
-    input
-    |> try_to_list()
+    reducer =
+      fn {k, v}, acc ->
+        key =
+          case k |> Enum.join(delimiter(opts)) |> String.split(delimiter(opts)) do
+            [k] -> [smart_convert(k)]
+            list -> Enum.map(list, &smart_convert/1)
+          end
+        value = if is_nil(fun), do: v, else: fun.({key, v})
+        deep_put_in(acc, {key, value}, opts)
+      end
+
+    with {_, unflattened} <- reduce(input, %{}, reducer, opts),
+      do: squeeze(unflattened)
   end
 
   @doc """
@@ -199,6 +215,11 @@ defmodule Iteraptor do
         {kv, fun.(kv, acc)}
       end
     traverse(input, fun_wrapper, opts, {[], acc})
+  end
+
+  def map_reduce(input, acc, fun, opts \\ []) do
+    unless is_function(fun, 2), do: raise "Function or arity fun/2 is required"
+    traverse(input, fun, opts, {[], acc})
   end
 
   ##############################################################################

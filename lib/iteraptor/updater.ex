@@ -82,7 +82,17 @@ defmodule Iteraptor.Updater do
   @delimiter "."
 
   @doc false
+  @spec delimiter(List.t) :: binary()
   def delimiter(opts) when is_list(opts), do: opts[:delimiter] || @delimiter
+
+  @doc false
+  @spec smart_convert(any()) :: integer() | binary() | atom()
+  def smart_convert(value) do
+    case value |> to_string() |> Integer.parse() do
+      {value, ""} -> value
+      _ -> String.to_existing_atom(value)
+    end
+  end
 
   @doc """
   Splits the string by delimiter, possibly converting the keys to symbols.
@@ -144,7 +154,12 @@ defmodule Iteraptor.Updater do
   """
 
   @spec deep_put_in(Map.t | Keyword.t, {List.t, any()}, Keyword.t) :: Map.t | Keyword.t
-  def deep_put_in(target, {key, value}, opts \\ []) when is_list(key) do
+  def deep_put_in(target, key_value, opts \\ [])
+  def deep_put_in(target, {[key], value}, _opts) do
+    put_in(target, [key], value)
+  end
+
+  def deep_put_in(target, {key, value}, opts) when is_list(key) do
     into = opts[:into] || @into
     [tail | head] = :lists.reverse(key)
     head = :lists.reverse(head)
