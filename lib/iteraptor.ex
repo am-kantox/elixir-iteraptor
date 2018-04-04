@@ -347,7 +347,7 @@ defmodule Iteraptor do
 
 
 
-  def squeeze(input, opts) do
+  def squeeze1(input, opts) do
     instance = into(opts)
 
     input
