@@ -26,8 +26,6 @@ defmodule Iteraptor.Updater do
       {List, []}
       iex> Iteraptor.Updater.type(42)
       {:invalid, nil}
-      iex> Iteraptor.Updater.type(%Struct1{field1: 42})
-      {Struct1, %Struct1{field1: nil}}
   """
   @spec type(Map.t | Keyword.t | List.t | any()) :: {atom(), %{} | [] | nil}
   def type(input) do
