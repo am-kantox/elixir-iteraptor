@@ -6,8 +6,9 @@ defmodule Iteraptor.Mixfile do
   def project do
     [
       app: @app,
-      version: "0.8.0",
+      version: "0.9.0",
       elixir: "~> 1.4",
+      elixirc_paths: elixirc_paths(Mix.env),
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
       description: description(),
@@ -47,4 +48,7 @@ defmodule Iteraptor.Mixfile do
      links: %{"GitHub" => "https://github.com/am-kantox/elixir-iteraptor",
               "Docs" => "http://hexdocs.pm/iteraptor"}]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 end

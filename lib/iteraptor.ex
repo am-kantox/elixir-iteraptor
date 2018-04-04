@@ -33,7 +33,8 @@ defmodule Iteraptor do
 
   """
 
-  @joiner "."
+  import Iteraptor.Updater
+
   @struct_joiner "%"
 
   @doc """
@@ -54,7 +55,7 @@ defmodule Iteraptor do
   ## Examples
 
       iex> [:a, 42] |> Iteraptor.to_flatmap
-      %{"0": :a, "1": 42}
+      %{0 => :a, 1 => 42}
 
       iex> %{a: 42} |> Iteraptor.to_flatmap
       %{a: 42}
@@ -88,13 +89,19 @@ defmodule Iteraptor do
 
       iex> %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}} |> Iteraptor.to_flatmap
       %{"a.b.c" => 42, "a.b.d.0" => nil, "a.b.d.1" => 42, "a.e.0" => :f, "a.e.1" => 42}
-
-      iex> %Struct1{field1: %Struct2{field2: [%{a: 42}, :b]}} |> Iteraptor.to_flatmap
-      %{"Struct1%field1.Struct2%field2.0.a" => 42, "Struct1%field1.Struct2%field2.1" => :b}
   """
 
   def to_flatmap(input, opts \\ []) when is_map(input) or is_list(input) do
-    process(input, :unknown, {%{}, "", nil}, opts)
+    reducer =
+      fn {k, v}, acc ->
+        key =
+          case k do
+            [key] -> key
+            _ -> Enum.join(k, delimiter(opts))
+          end
+        Map.put(acc, key, v)
+      end
+    with {_, flattened} <- reduce(input, %{}, reducer, opts), do: flattened
   end
 
   @doc """
@@ -139,13 +146,21 @@ defmodule Iteraptor do
       iex> %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42}
       ...> |> Iteraptor.from_flatmap
       %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
-
-      iex> %{"Struct1%field1.Struct2%field2.0.a" => 42, "Struct1%field1.Struct2%field2.1" => :b}
-      ...> |> Iteraptor.from_flatmap
-      %Struct1{field1: %Struct2{field2: [%{a: 42}, :b]}}
   """
   def from_flatmap(input, fun \\ nil, opts \\ []) when is_map(input) do
-    unprocess(input, fun, opts)
+    reducer =
+      fn {k, v}, acc ->
+        key =
+          case k |> Enum.join(delimiter(opts)) |> String.split(delimiter(opts)) do
+            [k] -> [smart_convert(k)]
+            list -> Enum.map(list, &smart_convert/1)
+          end
+        value = if is_nil(fun), do: v, else: fun.({key, v})
+        deep_put_in(acc, {key, value}, opts)
+      end
+
+    with {_, unflattened} <- reduce(input, %{}, reducer, opts),
+      do: squeeze(unflattened)
   end
 
   @doc """
@@ -158,218 +173,128 @@ defmodule Iteraptor do
   ## Parameters
 
   - `input`:  nested map/list/keyword to be walked through.
-  - `joiner`: the character to be used to join keys while flattening,
-  is returned to the callback as iterated key name;
-  _optional_, default value is `"."`;
   - `fun`:    callback to be called on each _value_;
-  e.g. on `%{a: {b: 42}}` will be called once, with tuple `{"a.b", 42}`.
+  e.g. on `%{a: {b: 42}}` will be called once, with tuple `{"a.b", 42}`;
+  - `opts`: the options to be passed to the iteration
+    - `joiner`: the character to be used to join keys while flattening,
+      is returned to the callback as iterated key name;
+      _optional_, default value is `"."`;
 
   ## Examples
 
-      iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
-      %{"a.b.c" => 42}
+      iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end)
+      {"a.b.c", 42}
+      %{a: %{b: %{c: 42}}}
+
+      iex> %{a: %{b: %{c: 42}}}
+      ...> |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end, full_parent: :tuple)
+      {{:a, :b, :c}, 42}
+      %{a: %{b: %{c: 42}}}
   """
   def each(input, fun, opts \\ []) do
+    map(input, fun, opts)
+    input
+  end
+
+  def map(input, fun, opts \\ []) do
     unless is_function(fun, 1), do: raise "Function or arity fun/1 is required"
-    process(input, :unknown, {%{}, "", fun}, opts)
+    traverse(input, fun, opts, {[], nil})
   end
 
-  @doc ~S"""
-    Behaves as `Enum.each_cons(n)` in ruby. Iterates the input producing the list of cons.
-    Gracefully stolen from https://groups.google.com/forum/#!topic/elixir-lang-core/LAK23vaJgvE
-
-  ## Examples
-
-      iex> 'letters' |> Iteraptor.each_cons
-      ['le', 'et', 'tt', 'te', 'er', 'rs']
-      iex> 'letters' |> Iteraptor.each_cons(4)
-      ['lett', 'ette', 'tter', 'ters']
-      iex> 1..6 |> Iteraptor.each_cons(4)
-      [[1,2,3,4], [2,3,4,5], [3,4,5,6]]
-  """
-  def each_cons(list, n \\ 2, acc \\ [])
-  def each_cons([], _, acc), do: acc
-  def each_cons(list, n, acc) when is_list(list) and length(list) < n, do: acc |> Enum.reverse
-  def each_cons(list = [_ | tail], n, acc), do: each_cons(tail, n, [Enum.take(list, n)|acc])
-  def each_cons(list, n, acc) when is_map(list), do: each_cons(list |> Enum.to_list, n, acc)
-
-  ##############################################################################
-
-  defp joiner(opts), do: opts[:joiner] || @joiner
-  defp struct_joiner(opts), do: opts[:struct_joiner] || @struct_joiner
-
-  defp process(input, type, acc_key_fun, opts)
-
-  ### -----------------------------------------------------------------------###
-
-  defp process(_, _, _, opts) when not is_list(opts),
-    do: raise ArgumentError, message: "Options must be a keyword list: #{opts.inspect}"
-
-  defp process(input, :unknown, {acc, key, fun}, opts) do
-    type = case Enumerable.impl_for(input) do
-             Enumerable.List -> if Keyword.keyword?(input), do: :keyword, else: :list
-             Enumerable.Map  -> :map
-             _               -> if is_map(input), do: :struct, else: :invalid
-           end
-    process(input, type, {acc, key, fun}, opts)
+  def reduce(input, acc, fun, opts \\ []) do
+    unless is_function(fun, 2), do: raise "Function or arity fun/2 is required"
+    fun_wrapper =
+      fn kv, acc ->
+        {kv, fun.(kv, acc)}
+      end
+    traverse(input, fun_wrapper, opts, {[], acc})
   end
 
-  ### -----------------------------------------------------------------------###
-
-  defp process(_, :invalid, {_, key, _}, _),
-    do: raise ArgumentError, message: "Unsupported data type found at prefix: #{key}"
-
-  defp process(input, :map, {acc, key, fun}, opts) do
-    input
-    |> Enum.reduce(acc, fn({k, v}, memo) ->
-        key = join(key, k, joiner(opts)) # FIXME JOIN
-        if is_map(v) or is_list(v) do
-          process(v, :unknown, {memo, key, fun}, opts)
-        else
-          unless is_nil(fun), do: fun.({key, v})
-          Map.put(memo, key, v)
-        end
-    end)
-  end
-
-  defp process(input, :keyword, {acc, key, fun}, opts) do
-    input
-    |> Enum.into(%{})
-    |> process(:map, {acc, key, fun}, opts) # FIXME BREAKS KW
-  end
-
-  defp process(input, :list, {acc, key, fun}, opts) do
-    input
-    |> Enum.with_index
-    |> Enum.map(fn({k, v}) -> {v, k} end)
-    |> Enum.into(%{})
-    |> process(:map, {acc, key, fun}, opts)
-  end
-
-  defp process(input, :struct, {acc, key, fun}, opts) do
-    struct_name = input.__struct__ |> inspect |> String.replace(".", struct_joiner(opts))
-    input
-      |> Map.keys
-      |> Enum.filter(fn e -> e != :__struct__ end)
-      |> Enum.map(fn e ->
-           {"#{struct_name}%#{e}", get_in(input, [Access.key!(e)])}
-         end)
-      |> Enum.into(%{})
-      |> process(:map, {acc, key, fun}, opts)
+  def map_reduce(input, acc, fun, opts \\ []) do
+    unless is_function(fun, 2), do: raise "Function or arity fun/2 is required"
+    traverse(input, fun, opts, {[], acc})
   end
 
   ##############################################################################
 
-  defp unprocess(input, fun, opts)
-
-  ### -----------------------------------------------------------------------###
-
-  defp unprocess(input, fun, opts) when is_map(input) do
-    input
-    |> Enum.reduce(%{}, fn({key, value}, acc) ->
-      put_or_update(acc, key, value, fun, opts)
-    end)
-    |> imply_lists(joiner(opts))
-  end
-
-  ##############################################################################
-
-  defp join(l, r \\ "", joiner \\ @joiner)
-
-  defp join(l, "", joiner) do
-    s = to_string l
-    if s |> String.contains?(joiner) do
-      s
-    else
-      String.to_atom s
+  defp traverse_callback(fun, {value, acc}) do
+    case fun do
+      f when is_function(fun, 1) -> {f.(value), nil}
+      f when is_function(fun, 2) -> f.(value, acc)
     end
   end
 
-  defp join("", r, joiner) do
-    join(r, "", joiner)
-  end
+  defp traverse(input, fun, opts, key_acc)
+  defp traverse(input, fun, opts, {key, acc}) when is_list(input) or is_map(input) do
+    {_type, into} = type(input)
 
-  defp join(l, r, joiner) do
-    to_string to_string(l) <> joiner <> to_string(r)
-  end
+    {value, acc} =
+      input
+      |> Enum.with_index()
+      |> Enum.map_reduce(acc, fn {kv, idx}, acc ->
+          {k, v} =
+            case kv do
+              {k, v} -> {k, v}
+              v -> {idx, v}
+            end
 
-  ##############################################################################
+          deep = key ++ [k]
 
-  defp put_or_update(input, key, value, fun, opts, path \\ "") when is_map(input) do
-    case key |> to_string |> String.split(joiner(opts), parts: 2) do
-      [key, rest] ->
-        {_, target} = input |> Map.get_and_update(join(key), fn current ->
-          old = case current do
-            nil -> %{}
-            _   -> current
+          {value, acc} =
+            case {opts[:yield], is_map(v), is_list(v)} do
+              {_, false, false} -> traverse_callback(fun, {{deep, v}, acc})
+              {:all, _, _} -> traverse_callback(fun, {{deep, v}, acc})
+              {:lists, _, true} -> traverse_callback(fun, {{deep, v}, acc})
+              {:maps, true, _} -> traverse_callback(fun, {{deep, v}, acc})
+              _ -> {{deep, v}, acc}
+            end
+          case value do
+            ^v ->
+              {value, acc} = traverse(v, fun, opts, {deep, acc})
+              {{k, value}, acc}
+            {^deep, _} ->
+              {value, acc} = traverse(v, fun, opts, {deep, acc})
+              {{k, value}, acc}
+            {^k, _} ->
+              {value, acc} = traverse(v, fun, opts, {deep, acc})
+              {{k, value}, acc}
+            {k, v} ->
+              {value, acc} = traverse(v, fun, opts, {deep, acc})
+              {{k, value}, acc}
+            v ->
+              {value, acc} = traverse(v, fun, opts, {deep, acc})
+              {{k, value}, acc}
           end
-          {current, old |> put_or_update(rest, value, fun, opts, join(path, key, joiner(opts)))}
         end)
-        target
-      [key] ->
-        unless is_nil(fun), do: fun.({path, value})
-        Map.put(input, join(key), value)
-    end
+    {value |> Enum.into(into) |> squeeze(), acc}
   end
+  defp traverse(input, _fun, _opts, {_key, acc}), do: {input, acc}
+
+  # defp process(input, :struct, {acc, key, fun}, opts) do
+  #   struct_name = input.__struct__ |> inspect |> String.replace(".", struct_joiner(opts))
+  #   input
+  #     |> Map.keys
+  #     |> Enum.reject(& &1 == :__struct__)
+  #     |> Enum.map(fn e ->
+  #          {"#{struct_name}%#{e}", get_in(input, [Access.key!(e)])}
+  #        end)
+  #     |> Enum.into(into(opts))
+  #     |> process(Map, {acc, key, fun}, opts)
+  # end
 
   ##############################################################################
 
-  defp parse_key(key, joiner, prefix) do
-    k = key
-        |> to_string
-        |> String.split(joiner)
-        |> Enum.at((prefix |> String.split(joiner) |> Enum.count) - 1)
-    try do
-      k |> String.to_integer
-    rescue
-      ArgumentError -> k
-    end
-  end
+  ##############################################################################
 
-  defp filter_keys(input, prefix) do
-    case prefix do
-      "" -> input
-      _  -> input |> Enum.filter(fn e -> e |> to_string |> String.starts_with?(to_string(prefix)) end)
-    end
-  end
+  # defp is_struct(input) when is_map(input) do
+  #   input |> Enum.reduce(nil, fn {k, _}, acc ->
+  #     case k |> to_string |> String.split(~r{#{@struct_joiner}(?=[^#{@struct_joiner}]*$)}) do
+  #       [^acc, _] -> acc
+  #       [struct_name, _] -> if acc == nil, do: struct_name, else: false
+  #       _ -> false
+  #     end
+  #   end)
+  # end
+  # defp is_struct(_), do: false
 
-  defp quacks_as_list(input, joiner, prefix \\ "") do
-    input = input |> Map.keys |> filter_keys(prefix)
-    (input
-    |> Enum.map(fn k ->
-      k |> parse_key(joiner, prefix)
-    end)
-    |> Enum.sort) == (0..Enum.count(input) - 1 |> Enum.to_list)
-  end
-
-  defp is_struct(input) when is_map(input) do
-    input |> Enum.reduce(nil, fn {k, _}, acc ->
-      case k |> to_string |> String.split(~r{#{@struct_joiner}(?=[^#{@struct_joiner}]*$)}) do
-        [^acc, _] -> acc
-        [struct_name, _] -> if acc == nil, do: struct_name, else: false
-        _ -> false
-      end
-    end)
-  end
-
-  defp imply_lists(input, joiner) when is_map(input) do
-    if quacks_as_list(input, joiner) do
-      sorted = input
-        |> Enum.sort(fn ({k1, _}, {k2, _}) ->
-             String.to_integer(to_string(k1)) < String.to_integer(to_string(k2))
-           end)
-      for {_, v} <- sorted do
-        if is_map(v), do: imply_lists(v, joiner), else: v
-      end
-    else
-      target = case is_struct(input) do
-                 false -> %{}
-                 name  -> struct(Module.concat(Elixir, name |> to_string |> String.replace(@struct_joiner, ".")))
-               end
-      input |> Enum.reduce(target, fn {k, v}, acc ->
-        key = join(~r{.*#{@struct_joiner}} |> Regex.replace(to_string(k), ""))
-        acc |> Map.put(join(key), (if is_map(v), do: imply_lists(v, joiner), else: v))
-      end)
-    end
-  end
 end

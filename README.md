@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/am-kantox/elixir-iteraptor.svg?branch=master)](https://travis-ci.org/am-kantox/elixir-iteraptor)
 [![Inline docs](http://inch-ci.org/github/am-kantox/elixir-iteraptor.svg)](http://inch-ci.org/github/am-kantox/elixir-iteraptor)
 [![Deps Status](https://beta.hexfaktor.org/badge/all/github/am-kantox/elixir-iteraptor.svg)](https://beta.hexfaktor.org/github/am-kantox/elixir-iteraptor)
-[![Hex.pm](https://img.shields.io/badge/hex-v.0.7.0-blue.svg?style=flat)](https://hex.pm/packages/iteraptor)
+[![Hex.pm](https://img.shields.io/badge/hex-v.0.9.0-blue.svg?style=flat)](https://hex.pm/packages/iteraptor)
 
 ### Handy enumerable operations
 
@@ -17,24 +17,6 @@
   * [API Reference](https://hexdocs.pm/iteraptor/api-reference.html)
   * [`Iteraptor`](https://hexdocs.pm/iteraptor/Iteraptor.html)
   * [`Iteraptor.Iteraptable`](https://hexdocs.pm/iteraptor/Iteraptor.Iteraptable.html)
-
-### Installation
-
-  1. Add `iteraptor` to your list of dependencies in `mix.exs`:
-
-    ```elixir
-    def deps do
-      [{:iteraptor, "~> 0.7.0"}]
-    end
-    ```
-
-  2. Ensure `iteraptor` is started before your application:
-
-    ```elixir
-    def application do
-      [applications: [:iteraptor]]
-    end
-    ```
 
 ### Usage
 
@@ -54,7 +36,20 @@ iex> %{a: %{b: %{c: 42}}} |> Iteraptor.to_flatmap |> Iteraptor.from_flatmap
 
 ```
 
+### Installation
+
+Add `iteraptor` to your list of dependencies in `mix.exs`:
+
+```elixir
+def deps, do: [{:iteraptor, "~> 0.9.0"}]
+```
+
+
 ### Changelog
+
+#### `0.9.0`
+
+Complete refactoring, `Iteraptor.map/3`, `Iteraptor.reduce/4`, `Iteraptor.map_reduce/4`.
 
 #### `0.5.0`
 
@@ -79,13 +74,11 @@ iex> %Iteraptor.Struct{field: 42}
 
 #### `0.4.0`
 
-Support for [structs](http://elixir-lang.org/getting-started/structs.html) on input.
+_Experimental:_ support for [structs](http://elixir-lang.org/getting-started/structs.html) on input.
 Structs will be automagically created on `|> Iteraptor.from_flatmap` from
 keys like `StructName%field` if a) this structure is known to the system
 and b) keys are consistent (e. g. there are no subsequent elements,
 belonging to different structs: `["S1%f" => 42, "S2%f" => 3.14]`.)
-
-Please see examples for an inspiration.
 
 #### `0.3.0`
 
