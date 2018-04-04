@@ -61,6 +61,7 @@ defmodule Iteraptor.Iteraptable do
         end
 
       end,
+
     collectable:
       quote do
 
@@ -74,6 +75,41 @@ defmodule Iteraptor.Iteraptable do
           end
         end
 
+      end,
+
+    access:
+      quote do
+        @behaviour Access
+
+        def fetch(term, key) do
+          try do
+            {:ok, term.key}
+          rescue
+            e in KeyError -> :error
+          end
+        end
+
+        def get(term, key, default \\ nil) do
+          case fetch(term, key) do
+            {:ok, value} -> value
+            :error -> default
+          end
+        end
+
+        def get_and_update(term, key, fun) do
+          current = get(term, key)
+
+          case fun.(current) do
+            {get, update} -> {get, %{term | key => update}}
+            :pop -> {current, %{term | key => nil}}
+            other ->
+              raise "the given function must return a two-element tuple or :pop, got: #{inspect(other)}"
+          end
+        end
+
+        def pop(term, key) do
+          get_and_update(term, key, fn _ -> :pop end)
+        end
       end
   ]
 
@@ -93,23 +129,8 @@ defmodule Iteraptor.Iteraptable do
       %Iteraptor.Struct{field: 84}
   """
   defmacro __using__(opts \\ []) do
-    [:enumerable, :collectable]
-    |> Enum.reduce([], fn type, acc ->
+    Enum.reduce(~w|enumerable collectable access|a, [], fn type, acc ->
       if opts[:skip] == type, do: acc, else: [@codepieces[type] | acc]
     end)
   end
-end
-
-# this is a temporary glitch/artifact of protocol consolidation does not work
-#    properly in test environment: basically I need this for tests, sorry :)
-defmodule Iteraptor.Struct do
-  @moduledoc false
-
-  @fields [field: nil]
-
-  @doc false
-  def fields, do: @fields
-  defstruct @fields
-
-  use Iteraptor.Iteraptable
 end

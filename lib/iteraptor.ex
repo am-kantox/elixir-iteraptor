@@ -89,9 +89,6 @@ defmodule Iteraptor do
 
       iex> %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}} |> Iteraptor.to_flatmap
       %{"a.b.c" => 42, "a.b.d.0" => nil, "a.b.d.1" => 42, "a.e.0" => :f, "a.e.1" => 42}
-
-      iex> %Struct1{field1: %Struct2{field2: [%{a: 42}, :b]}} |> Iteraptor.to_flatmap
-      %{"Struct1%field1.Struct2%field2.0.a" => 42, "Struct1%field1.Struct2%field2.1" => :b}
   """
 
   def to_flatmap(input, opts \\ []) when is_map(input) or is_list(input) do
@@ -149,10 +146,6 @@ defmodule Iteraptor do
       iex> %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42}
       ...> |> Iteraptor.from_flatmap
       %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
-
-      iex> %{"Struct1%field1.Struct2%field2.0.a" => 42, "Struct1%field1.Struct2%field2.1" => :b}
-      ...> |> Iteraptor.from_flatmap
-      %Struct1{field1: %Struct2{field2: [%{a: 42}, :b]}}
   """
   def from_flatmap(input, fun \\ nil, opts \\ []) when is_map(input) do
     reducer =
