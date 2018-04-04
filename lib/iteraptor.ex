@@ -33,6 +33,8 @@ defmodule Iteraptor do
 
   """
 
+  import Iteraptor.Updater
+
   @into %{}
   @joiner "."
   @struct_joiner "%"
@@ -146,10 +148,13 @@ defmodule Iteraptor do
       %Struct1{field1: %Struct2{field2: [%{a: 42}, :b]}}
   """
   def from_flatmap(input, fun \\ nil, opts \\ []) when is_map(input) do
+    finalize_opts = [yield_all: true, collapse_lists: true, full_parent: true]
+
     input
     |> unprocess(fun, opts)
     |> IO.inspect(label: "⚐")
-    |> fix(opts)
+    # |> fix(opts)
+    |> map(fn {k, v} -> {k, maybe_make_list(v, [])} end, finalize_opts)
     |> maybe_make_list(opts)
   end
 
@@ -196,12 +201,6 @@ defmodule Iteraptor do
     # |> fix(opts)
   end
 
-  defp fix(input, opts) do
-    opts = Keyword.merge(opts, yield_all: true, collapse_lists: true, full_parent: true)
-    fun = fn {k, v} -> {k, maybe_make_list(v, opts)} end
-    process(input, :unknown, {nil, nil, fun}, opts)
-  end
-
   ##############################################################################
 
   defp process(input, type, acc_key_fun, opts)
@@ -215,9 +214,9 @@ defmodule Iteraptor do
     do: raise ArgumentError, message: "Unsupported data type found at prefix: #{inspect key}"
 
   defp process(input, :unknown, {acc, key, fun}, opts) do
-    {type, instance} = type(input, acc)
+    {type, _} = type(input)
     key = safe_join(key, nil, opts)
-    process(input, type, {instance, key, fun}, opts)
+    process(input, type, {acc, key, fun}, opts)
   end
 
   defp process(input, type, {acc, key, fun}, opts) when type in [Map, Keyword] do
@@ -306,20 +305,6 @@ defmodule Iteraptor do
 
   ##############################################################################
 
-  defp type(input, default \\ nil) do
-    {type, instance} =
-      case Enumerable.impl_for(input) do
-        Enumerable.List ->
-          {(if Keyword.keyword?(input), do: Keyword, else: List), []}
-        Enumerable.Map ->
-          {Map, %{}}
-        _ ->
-        # FIXME struct instantiation is potentially dangerous
-          if is_map(input), do: {:struct, struct(input.__struct__)}, else: {:invalid, nil}
-      end
-    {type, default || instance}
-  end
-
   defp safe_join(parent, key, opts) when not is_list(key) do
     case {parent, to_string(key), opts[:full_parent] || :joined} do
       {p, "", :joined} when is_nil(p) or p == [] or p == "" -> ""
@@ -327,28 +312,9 @@ defmodule Iteraptor do
       {_, "", _} -> parent
       {p, _, :joined} when is_nil(p) or p == [] or p == "" -> key
       {p, _, _} when is_nil(p) or p == [] or p == "" -> [key]
-      {_, _, :joined} -> join(parent, key, joiner(opts) )
+      # {_, _, :joined} -> join(parent, key, joiner(opts) )
       {_, _, _} -> parent ++ [key]
     end
-  end
-
-  defp join(l, r \\ "", joiner \\ @joiner)
-
-  defp join(l, "", joiner) do
-    s = to_string l
-    if s |> String.contains?(joiner) do
-      s
-    else
-      String.to_atom s
-    end
-  end
-
-  defp join("", r, joiner) do
-    join(r, "", joiner)
-  end
-
-  defp join(l, r, joiner) do
-    to_string to_string(l) <> joiner <> to_string(r)
   end
 
   ##############################################################################
@@ -379,20 +345,7 @@ defmodule Iteraptor do
   end
   defp key_splitter({key, value}, _opts), do: {key, [], value}
 
-  def dig(input, acc \\ [])
-  def dig(_, {:error, _} = error), do: error
-  def dig(input, acc) when is_map(input) do
-    case Map.keys(input) do
-      [k] -> dig(input[k], [k | acc])
-      _ -> {:error, input}
-    end
-  end
-  def dig([input], acc) when is_map(input) and map_size(input) == 1,
-    do: dig(input, acc)
-    # do: dig(input |> Map.to_list(), acc)
-  def dig([{k, v}], acc), do: dig(v, [k | acc])
-  def dig(input, _) when is_list(input), do: {:error, input}
-  def dig(input, acc), do: {:ok, {:lists.reverse(acc), input}}
+
 
   def squeeze(input, opts) do
     instance = into(opts)
