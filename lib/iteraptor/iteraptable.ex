@@ -2,22 +2,8 @@ defmodule Iteraptor.Iteraptable do
   @moduledoc """
   `use Iteraptor.Iteraptable` inside structs to make them both
   [`Enumerable`](http://elixir-lang.org/docs/stable/elixir/Enumerable.html) and
-  [`Collectable`](http://elixir-lang.org/docs/stable/elixir/Collectable.html):
-
-      defmodule Iteraptor.Struct do
-        @fields [field: nil]
-
-        def fields, do: @fields
-        defstruct @fields
-
-        use Iteraptor.Iteraptable
-      end
-
-      iex> %Iteraptor.Struct{field: 42}
-      ...>   |> Enum.each(fn e -> Logger.debug(inspect(e)) end)
-      :ok
-
-      #⇒   {:field, 42}
+  [`Collectable`](http://elixir-lang.org/docs/stable/elixir/Collectable.html) and
+  implement the [`Access`](https://hexdocs.pm/elixir/Access.html#content) behaviour:
 
   ## Usage
 
