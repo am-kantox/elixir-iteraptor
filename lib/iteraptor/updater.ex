@@ -241,6 +241,12 @@ defmodule Iteraptor.Updater do
       [foo: %{bar: 42, baz: 3.14}]
       iex> Iteraptor.Updater.squeeze([a: [b: [c: 42]], a: [b: [d: 3.14]]])
       [a: [b: [c: 42, d: 3.14]]]
+      iex> Iteraptor.Updater.squeeze([a: [b: [c: :foo]], a: [b: [c: 3.14]]])
+      [a: [b: [c: [:foo, 3.14]]]]
+      iex> Iteraptor.Updater.squeeze([a: [b: [:foo, :bar]], a: [b: [c: 3.14]]])
+      [a: [b: [:foo, :bar, {:c, 3.14}]]]
+      iex> Iteraptor.Updater.squeeze([a: [:foo, :bar], a: [b: [c: 3.14]]])
+      [a: [:foo, :bar, {:b, [c: 3.14]}]]
   """
   @spec squeeze(Map.t | Keyword.t | List.t) :: Map.t | Keyword.t | List.t
   def squeeze(input) when is_map(input) or is_list(input) do
@@ -250,11 +256,16 @@ defmodule Iteraptor.Updater do
       Enum.reduce(input, {into, 0}, fn
         {k, v}, {acc, orphans} ->
           {_, neu} =
-            get_and_update_in(acc, [k], fn
-              nil -> {nil, v}
-              map when is_map(map) -> {map, Map.merge(map, v)}
-              list when is_list(list) -> {list, list ++ v}
-            end)
+            case type do
+              List -> {nil, [{k, v} | acc]}
+              _ ->
+                get_and_update_in(acc, [k], fn
+                  nil -> {nil, v}
+                  map when is_map(map) -> {map, Map.merge(map, v)}
+                  list when is_list(list) -> {list, list ++ v}
+                  other -> {other, [other, v]}
+                end)
+            end
           {neu, orphans}
         v, {acc, orphans} ->
           case type do
@@ -264,7 +275,6 @@ defmodule Iteraptor.Updater do
           end
       end)
 
-    {_type, into} = type(result)
     result
     |> Enum.map(fn
          {k, v} when is_list(v) -> {k, v |> squeeze() |> :lists.reverse()}
@@ -273,6 +283,5 @@ defmodule Iteraptor.Updater do
        end)
     |> Enum.into(into)
   end
-  def squeeze({_, v}), do: v
   def squeeze(input), do: input
 end
