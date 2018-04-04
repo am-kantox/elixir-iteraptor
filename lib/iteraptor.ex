@@ -299,7 +299,7 @@ defmodule Iteraptor do
   defp unprocess(input, fun, opts) when is_map(input) or is_list(input) do
     input
     |> shave_off(fun, opts)
-    |> squeeze(opts)
+    |> squeeze()
     # |> fix(opts)
   end
 

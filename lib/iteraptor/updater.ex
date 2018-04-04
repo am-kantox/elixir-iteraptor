@@ -235,38 +235,44 @@ defmodule Iteraptor.Updater do
 
   ## Examples:
 
-      iex> Iteraptor.Updater.squeeze([foo: [bar: 42], foo: [baz: 3.14]])
-      [foo: [bar: 42, baz: 3.14]]
+      #iex> Iteraptor.Updater.squeeze([foo: [bar: 42], foo: [baz: 3.14]])
+      #[foo: [bar: 42, baz: 3.14]]
       iex> Iteraptor.Updater.squeeze([foo: %{bar: 42}, foo: %{baz: 3.14}])
       [foo: %{bar: 42, baz: 3.14}]
       iex> Iteraptor.Updater.squeeze([a: [b: [c: 42]], a: [b: [d: 3.14]]])
-      [foo: %{bar: 42, baz: 3.14}]
+      [a: [b: [c: 42, d: 3.14]]]
   """
   @spec squeeze(Map.t | Keyword.t | List.t) :: Map.t | Keyword.t | List.t
   def squeeze(input) when is_map(input) or is_list(input) do
-    {type, acc} = type(input)
+    {type, into} = type(input)
 
     {result, _} =
-      Enum.reduce(input, {acc, 0}, fn
+      Enum.reduce(input, {into, 0}, fn
         {k, v}, {acc, orphans} ->
           {_, neu} =
             get_and_update_in(acc, [k], fn
-              nil -> {nil, {k, v}}
-              map when is_map(map) -> {map, Map.put(map, k, v)}
-              {^k, map} when is_map(map) -> {{k, map}, Map.merge(map, v)}
-              list when is_list(list) -> {list, list ++ {k, v}}
-              {^k, list} when is_list(list) -> {{k, list}, list ++ v}
+              nil -> {nil, v}
+              map when is_map(map) -> {map, Map.merge(map, v)}
+              list when is_list(list) -> {list, list ++ v}
             end)
           {neu, orphans}
         v, {acc, orphans} ->
           case type do
-            List -> {acc ++ [v], orphans}
-            Keyword -> {acc ++ [v], orphans} # FIXME raise? this cannot happen
+            Keyword -> {[v | acc], orphans} # FIXME raise? this cannot happen
+            List -> {[v | acc], orphans}
             Map -> {Map.put(acc, orphans, v), orphans + 1}
           end
       end)
 
+    {_type, into} = type(result)
     result
+    |> Enum.map(fn
+         {k, v} when is_list(v) -> {k, v |> squeeze() |> :lists.reverse()}
+         {k, v} -> {k, squeeze(v)}
+         v -> v
+       end)
+    |> Enum.into(into)
   end
-  def squeeze(input, _), do: input
+  def squeeze({_, v}), do: v
+  def squeeze(input), do: input
 end
