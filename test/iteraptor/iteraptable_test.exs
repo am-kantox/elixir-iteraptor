@@ -13,10 +13,10 @@ defmodule Iteraptor.Iteraptable.Test do
 #   use Iteraptor.Iteraptable
 # end
 
-  test "iterapted struct is enumerated" do
-    assert capture_log(fn ->
-      %Iteraptor.Struct{field: 42}
-        |> Enum.each(fn e -> Logger.debug(inspect(e)) end)
-    end) =~ "{:field, 42}"
-  end
+# test "iterapted struct is enumerated" do
+#   assert capture_log(fn ->
+#     %Iteraptor.Struct{field: 42}
+#       |> Enum.each(fn e -> Logger.debug(inspect(e)) end)
+#   end) =~ "{:field, 42}"
+# end
 end
