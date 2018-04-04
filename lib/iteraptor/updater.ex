@@ -239,7 +239,11 @@ defmodule Iteraptor.Updater do
       #[foo: [bar: 42, baz: 3.14]]
       iex> Iteraptor.Updater.squeeze([foo: %{bar: 42}, foo: %{baz: 3.14}])
       [foo: %{bar: 42, baz: 3.14}]
+      iex> Iteraptor.Updater.squeeze([foo: %{bar: 42}, foo: :baz])
+      [foo: [%{bar: 42}, :baz]]
       iex> Iteraptor.Updater.squeeze([a: [b: [c: 42]], a: [b: [d: 3.14]]])
+      [a: [b: [c: 42, d: 3.14]]]
+      iex> Iteraptor.Updater.squeeze([a: [b: [c: 42]], a: [b: %{d: 3.14}]])
       [a: [b: [c: 42, d: 3.14]]]
       iex> Iteraptor.Updater.squeeze([a: [b: [c: :foo]], a: [b: [c: 3.14]]])
       [a: [b: [c: [:foo, 3.14]]]]
@@ -261,8 +265,18 @@ defmodule Iteraptor.Updater do
               _ ->
                 get_and_update_in(acc, [k], fn
                   nil -> {nil, v}
-                  map when is_map(map) -> {map, Map.merge(map, v)}
-                  list when is_list(list) -> {list, list ++ v}
+                  map when is_map(map) ->
+                    case v do
+                      %{} -> {map, Map.merge(map, v)}
+                      _ -> {map, [map, v]}
+                    end
+                  list when is_list(list) ->
+                    case v do
+                      [] -> {list, list}
+                      [_|_] -> {list, list ++ v}
+                      %{} -> {list, list ++ Map.to_list(v)} # FIXME opts? needed?
+                      _ -> {list, list ++ [v]}
+                    end
                   other -> {other, [other, v]}
                 end)
             end
