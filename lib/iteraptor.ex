@@ -95,7 +95,11 @@ defmodule Iteraptor do
   """
 
   def to_flatmap(input, opts \\ []) when is_map(input) or is_list(input) do
-    # process(input, :unknown, {into(opts), nil, nil}, opts)
+    reducer =
+      fn {k, v}, acc ->
+        Map.put(acc, Enum.join(k, delimiter(opts)), v)
+      end
+    with {_, flattened} <- reduce(input, %{}, reducer, opts), do: flattened
   end
 
   @doc """
@@ -185,47 +189,72 @@ defmodule Iteraptor do
 
   def map(input, fun, opts \\ []) do
     unless is_function(fun, 1), do: raise "Function or arity fun/1 is required"
-    traverse(input, fun, opts)
+    traverse(input, fun, opts, {[], nil})
+  end
+
+  def reduce(input, acc, fun, opts \\ []) do
+    unless is_function(fun, 2), do: raise "Function or arity fun/2 is required"
+    fun_wrapper =
+      fn kv, acc ->
+        {kv, fun.(kv, acc)}
+      end
+    traverse(input, fun_wrapper, opts, {[], acc})
   end
 
   ##############################################################################
 
-  defp traverse(input, fun, opts, key \\ [])
-  defp traverse(input, fun, opts, key) when is_list(input) or is_map(input) do
+  defp traverse_callback(fun, {value, acc}) do
+    case fun do
+      f when is_function(fun, 1) -> {f.(value), nil}
+      f when is_function(fun, 2) -> f.(value, acc)
+    end
+  end
+
+  defp traverse(input, fun, opts, key_acc)
+  defp traverse(input, fun, opts, {key, acc}) when is_list(input) or is_map(input) do
     {_type, into} = type(input)
 
-    input
-    |> Enum.with_index()
-    |> Enum.map(fn {kv, idx} ->
-         {k, v} =
-           case kv do
-             {k, v} -> {k, v}
-             v -> {idx, v}
-           end
+    {value, acc} =
+      input
+      |> Enum.with_index()
+      |> Enum.map_reduce(acc, fn {kv, idx}, acc ->
+          {k, v} =
+            case kv do
+              {k, v} -> {k, v}
+              v -> {idx, v}
+            end
 
-         deep = key ++ [k]
+          deep = key ++ [k]
 
-         value =
-           case {opts[:yield], is_map(v), is_list(v)} do
-             {_, false, false} -> fun.({deep, v})
-             {:all, _, _} -> fun.({deep, v})
-             {:lists, _, true} -> fun.({deep, v})
-             {:maps, true, _} -> fun.({deep, v})
-             _ -> {deep, v}
-           end
-         case value do
-           ^v -> {k, traverse(v, fun, opts, deep)}
-           {^deep, _} -> {k, traverse(v, fun, opts, deep)}
-           {^k, _} -> {k, traverse(v, fun, opts, deep)}
-           {k, v} -> {k, traverse(v, fun, opts, deep)}
-           v -> {k, traverse(v, fun, opts, deep)}
-         end
-       end)
-    |> Enum.into(into)
-    |> squeeze()
-    |> try_to_list()
+          {value, acc} =
+            case {opts[:yield], is_map(v), is_list(v)} do
+              {_, false, false} -> traverse_callback(fun, {{deep, v}, acc})
+              {:all, _, _} -> traverse_callback(fun, {{deep, v}, acc})
+              {:lists, _, true} -> traverse_callback(fun, {{deep, v}, acc})
+              {:maps, true, _} -> traverse_callback(fun, {{deep, v}, acc})
+              _ -> {{deep, v}, acc}
+            end
+          case value do
+            ^v ->
+              {value, acc} = traverse(v, fun, opts, {deep, acc})
+              {{k, value}, acc}
+            {^deep, _} ->
+              {value, acc} = traverse(v, fun, opts, {deep, acc})
+              {{k, value}, acc}
+            {^k, _} ->
+              {value, acc} = traverse(v, fun, opts, {deep, acc})
+              {{k, value}, acc}
+            {k, v} ->
+              {value, acc} = traverse(v, fun, opts, {deep, acc})
+              {{k, value}, acc}
+            v ->
+              {value, acc} = traverse(v, fun, opts, {deep, acc})
+              {{k, value}, acc}
+          end
+        end)
+    {value |> Enum.into(into) |> squeeze(), acc}
   end
-  defp traverse(input, _fun, _opts, _key), do: input
+  defp traverse(input, _fun, _opts, {_key, acc}), do: {input, acc}
 
   # defp process(input, :struct, {acc, key, fun}, opts) do
   #   struct_name = input.__struct__ |> inspect |> String.replace(".", struct_joiner(opts))

@@ -81,6 +81,9 @@ defmodule Iteraptor.Updater do
 
   @delimiter "."
 
+  @doc false
+  def delimiter(opts) when is_list(opts), do: opts[:delimiter] || @delimiter
+
   @doc """
   Splits the string by delimiter, possibly converting the keys to symbols.
 
@@ -97,7 +100,7 @@ defmodule Iteraptor.Updater do
   """
   @spec split(binary(), Keyword.t) :: List.t
   def split(input, opts \\ []) when is_binary(input) do
-    result = String.split(input, opts[:delimiter] || @delimiter)
+    result = String.split(input, delimiter(opts))
     case opts[:transform] do
       :safe -> Enum.map(result, &String.to_existing_atom/1)
       :unsafe -> Enum.map(result, &String.to_atom/1)
@@ -117,7 +120,7 @@ defmodule Iteraptor.Updater do
   """
   @spec join(List.t, Keyword.t) :: binary()
   def join(input, opts \\ []) when is_list(input) do
-    Enum.join(input, opts[:delimiter] || @delimiter)
+    Enum.join(input, delimiter(opts))
   end
 
   @into %{}
@@ -296,6 +299,7 @@ defmodule Iteraptor.Updater do
          v -> v
        end)
     |> Enum.into(into)
+    |> try_to_list()
   end
   def squeeze(input), do: input
 end
