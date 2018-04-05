@@ -2,7 +2,8 @@ defmodule Iteraptor.Mixfile do
   use Mix.Project
 
   @app :iteraptor
-  @version "1.0.0"
+  @github "am-kantox/elixir-#{@app}"
+  @version "1.0.1"
 
   def project do
     [
@@ -50,8 +51,8 @@ defmodule Iteraptor.Mixfile do
       maintainers: ["Aleksei Matiushkin"],
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/am-kantox/elixir-iteraptor",
-        "Docs" => "http://hexdocs.pm/iteraptor"
+        "GitHub" => "https://github.com/#{@github}",
+        "Docs" => "http://hexdocs.pm/@{app}"
       }
     ]
   end
@@ -62,7 +63,7 @@ defmodule Iteraptor.Mixfile do
       source_ref: "v#{@version}",
       canonical: "http://hexdocs.pm/#{@app}",
       # logo: "stuff/images/logo.png",
-      source_url: "https://github.com/am-kantox/#{@app}",
+      source_url: "https://github.com/#{@github}",
       # extras: [ "stuff/pages/intro.md" ],
       groups_for_modules: [
         # Iteraptor

@@ -1,35 +1,28 @@
 defmodule Iteraptor do
   @moduledoc """
   `Iteraptor` makes complicated nested structures (currently `map`s, `list`s
-    and somehow `Keyword`s) iteration easier.
+    and `Keyword`s) iteration easier.
 
   ## Usage
 
-  ### `to_flatmap`:
+  #### Iterating, Mapping, Reducing
 
-      iex> %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}} |> Iteraptor.to_flatmap
-      %{"a.b.c" => 42, "a.b.d.0" => nil, "a.b.d.1" => 42, "a.e.0" => :f, "a.e.1" => 42}
+  * [`Iteraptor.each/3`](https://hexdocs.pm/iteraptor/Iteraptor.html#each/3)
+    to iterate a deeply nested map/list/keyword;
+  * [`Iteraptor.map/3`](https://hexdocs.pm/iteraptor/Iteraptor.html#map/3)
+    to map a deeply nested map/list/keyword;
+  * [`Iteraptor.reduce/4`](https://hexdocs.pm/iteraptor/Iteraptor.html#reduce/4)
+    to reduce a deeply nested map/list/keyword;
+  * [`Iteraptor.map_reduce/4`](https://hexdocs.pm/iteraptor/Iteraptor.html#map_reduce/4)
+    to map and reduce a deeply nested map/list/keyword;
 
-  ### `from_flatmap`:
+  #### Flattening
 
-      iex> %{"a.b.c" => 42, "a.b.d.0" => nil, "a.b.d.1" => 42, "a.e.0" => :f, "a.e.1" => 42}
-      ...> |> Iteraptor.from_flatmap
-      %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
-
-  ### `each`:
-
-      %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
-        |> Iteraptor.each(fn({k, v}) ->
-          Logger.debug(k <> " ⇒ " <> inspect(v))
-        end)
-
-  Returning:
-
-      a.b.c ⇒ 42
-      a.b.d.0 ⇒ nil
-      a.b.d.1 ⇒ 42
-      a.e.0 ⇒ :f
-      a.e.1 ⇒ 42
+  * [`Iteraptor.to_flatmap/2`](https://hexdocs.pm/iteraptor/Iteraptor.html#to_flatmap/2)
+    to flatten a deeply nested map/list/keyword into
+    flatten map with concatenated keys;
+  * [`Iteraptor.from_flatmap/3`](https://hexdocs.pm/iteraptor/Iteraptor.html#from_flatmap/3)
+    to “unveil”/“unflatten” the previously flattened map into nested structure;
 
   """
 
