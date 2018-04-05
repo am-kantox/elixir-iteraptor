@@ -1,30 +1,36 @@
-defmodule Iteraptor.Updater do
+defmodule Iteraptor.Utils do
+  @moduledoc "Helper functions to update nested terms"
 
   defmodule Unsupported do
+    @moduledoc """
+    An exception to be thrown from banged methods of `Iteraptor`.
+
+    Sooner or later we’ll support everything, that’s why meanwhile
+      we raise `Unsupported` if something goes wrong.
+    """
+
     defexception [:term, :function, :message]
 
     def exception(term: term, function: function) do
       message = "Unsupported term #{inspect term} in call to #{function}."
-      %Iteraptor.Updater.Unsupported{term: term, function: function, message: message}
+      %Iteraptor.Utils.Unsupported{term: term, function: function, message: message}
     end
   end
-
-  @moduledoc "Helper functions to update nested terms"
 
   @doc """
   Determines the type of the given term.
 
   ## Examples:
 
-      iex> Iteraptor.Updater.type(%{foo: :bar})
+      iex> Iteraptor.Utils.type(%{foo: :bar})
       {Map, %{}}
-      iex> Iteraptor.Updater.type([foo: :bar])
+      iex> Iteraptor.Utils.type([foo: :bar])
       {Keyword, []}
-      iex> Iteraptor.Updater.type([{:foo, :bar}])
+      iex> Iteraptor.Utils.type([{:foo, :bar}])
       {Keyword, []}
-      iex> Iteraptor.Updater.type(~w|foo bar|a)
+      iex> Iteraptor.Utils.type(~w|foo bar|a)
       {List, []}
-      iex> Iteraptor.Updater.type(42)
+      iex> Iteraptor.Utils.type(42)
       {:invalid, nil}
   """
   @spec type(Map.t | Keyword.t | List.t | any()) :: {atom(), %{} | [] | nil}
@@ -47,13 +53,13 @@ defmodule Iteraptor.Updater do
 
   ## Examples:
 
-      iex> Iteraptor.Updater.dig(%{k1: %{k2: %{k3: :value}}})
+      iex> Iteraptor.Utils.dig(%{k1: %{k2: %{k3: :value}}})
       {:ok, {[:k1, :k2, :k3], :value}}
-      iex> Iteraptor.Updater.dig([k1: [k2: [k3: :value]]])
+      iex> Iteraptor.Utils.dig([k1: [k2: [k3: :value]]])
       {:ok, {[:k1, :k2, :k3], :value}}
-      iex> Iteraptor.Updater.dig([k1: :value, k2: :value])
+      iex> Iteraptor.Utils.dig([k1: :value, k2: :value])
       {:error, [k1: :value, k2: :value]}
-      iex> Iteraptor.Updater.dig([k1: %{k2: [k3: :value]}])
+      iex> Iteraptor.Utils.dig([k1: %{k2: [k3: :value]}])
       {:ok, {[:k1, :k2, :k3], :value}}
   """
   @spec dig(Map.t | Keyword.t, List.t) :: {:ok, {List.t, any()}} | {:error, any()}
@@ -73,11 +79,11 @@ defmodule Iteraptor.Updater do
   def dig!(input, acc \\ []) do
     case dig(input, acc) do
       {:ok, result} -> result
-      {:error, term} -> raise Unsupported, term: term, function: :dig
+      {:error, term} -> raise Unsupported, term: term, function: "Iteraptor.Utils.dig/2"
     end
   end
 
-  @delimiter "."
+  @delimiter Application.get_env(:iteraptor, :delimiter, ".")
 
   @doc false
   @spec delimiter(List.t) :: binary()
@@ -97,13 +103,13 @@ defmodule Iteraptor.Updater do
 
   ## Examples:
 
-      iex> Iteraptor.Updater.split("a.b.c.d", transform: :none)
+      iex> Iteraptor.Utils.split("a.b.c.d", transform: :none)
       ["a", "b", "c", "d"]
-      iex> Iteraptor.Updater.split("a_b_c_d", delimiter: "_")
+      iex> Iteraptor.Utils.split("a_b_c_d", delimiter: "_")
       ["a", "b", "c", "d"]
-      iex> Iteraptor.Updater.split("a.b.c.d", transform: :unsafe)
+      iex> Iteraptor.Utils.split("a.b.c.d", transform: :unsafe)
       [:a, :b, :c, :d]
-      iex> Iteraptor.Updater.split("a.b.c.d", transform: :safe)
+      iex> Iteraptor.Utils.split("a.b.c.d", transform: :safe)
       [:a, :b, :c, :d]
   """
   @spec split(binary(), Keyword.t) :: List.t
@@ -121,9 +127,9 @@ defmodule Iteraptor.Updater do
 
   ## Examples:
 
-      iex> Iteraptor.Updater.join(~w|a b c d|)
+      iex> Iteraptor.Utils.join(~w|a b c d|)
       "a.b.c.d"
-      iex> Iteraptor.Updater.join(~w|a b c d|, delimiter: "_")
+      iex> Iteraptor.Utils.join(~w|a b c d|, delimiter: "_")
       "a_b_c_d"
   """
   @spec join(List.t, Keyword.t) :: binary()
@@ -131,7 +137,7 @@ defmodule Iteraptor.Updater do
     Enum.join(input, delimiter(opts))
   end
 
-  @into %{}
+  @into Application.get_env(:iteraptor, :into, %{})
 
   @doc """
   Safe put the value deeply into the term nesting structure. Creates
@@ -139,15 +145,15 @@ defmodule Iteraptor.Updater do
 
   ## Examples:
 
-      iex> Iteraptor.Updater.deep_put_in(%{}, {~w|a b c|a, 42})
+      iex> Iteraptor.Utils.deep_put_in(%{}, {~w|a b c|a, 42})
       %{a: %{b: %{c: 42}}}
-      iex> Iteraptor.Updater.deep_put_in(%{a: %{b: %{c: 42}}}, {~w|a b d|a, :foo})
+      iex> Iteraptor.Utils.deep_put_in(%{a: %{b: %{c: 42}}}, {~w|a b d|a, :foo})
       %{a: %{b: %{c: 42, d: :foo}}}
-      iex> Iteraptor.Updater.deep_put_in(%{a: %{b: [c: 42]}}, {~w|a b d|a, :foo})
+      iex> Iteraptor.Utils.deep_put_in(%{a: %{b: [c: 42]}}, {~w|a b d|a, :foo})
       %{a: %{b: [c: 42, d: :foo]}}
-      iex> Iteraptor.Updater.deep_put_in(%{a: %{b: [42]}}, {~w|a b|a, :foo})
+      iex> Iteraptor.Utils.deep_put_in(%{a: %{b: [42]}}, {~w|a b|a, :foo})
       %{a: %{b: [42, :foo]}}
-      iex> Iteraptor.Updater.deep_put_in(%{a: [:foo, %{b: 42}]}, {~w|a b|a, :foo})
+      iex> Iteraptor.Utils.deep_put_in(%{a: [:foo, %{b: 42}]}, {~w|a b|a, :foo})
       %{a: [:foo, %{b: 42}, {:b, :foo}]}
   """
 
@@ -192,15 +198,15 @@ defmodule Iteraptor.Updater do
 
   ## Examples:
 
-      iex> Iteraptor.Updater.quacks_as_list(%{"0" => :foo, 1 => :bar})
+      iex> Iteraptor.Utils.quacks_as_list(%{"0" => :foo, 1 => :bar})
       true
-      iex> Iteraptor.Updater.quacks_as_list([{:"1", :bar}, {:"0", :foo}])
+      iex> Iteraptor.Utils.quacks_as_list([{:"1", :bar}, {:"0", :foo}])
       true
-      iex> Iteraptor.Updater.quacks_as_list(%{foo: :bar})
+      iex> Iteraptor.Utils.quacks_as_list(%{foo: :bar})
       false
-      iex> Iteraptor.Updater.quacks_as_list(%{"5" => :foo, "1" => :bar})
+      iex> Iteraptor.Utils.quacks_as_list(%{"5" => :foo, "1" => :bar})
       false
-      iex> Iteraptor.Updater.quacks_as_list(42)
+      iex> Iteraptor.Utils.quacks_as_list(42)
       false
   """
   @spec quacks_as_list(Map.t | Keyword.t | any()) :: true | false
@@ -224,13 +230,13 @@ defmodule Iteraptor.Updater do
 
   ## Examples:
 
-      iex> Iteraptor.Updater.try_to_list(%{"0" => :foo, 1 => :bar})
+      iex> Iteraptor.Utils.try_to_list(%{"0" => :foo, 1 => :bar})
       [:foo, :bar]
-      iex> Iteraptor.Updater.try_to_list([{:"1", :bar}, {:"0", :foo}])
+      iex> Iteraptor.Utils.try_to_list([{:"1", :bar}, {:"0", :foo}])
       [:foo, :bar]
-      iex> Iteraptor.Updater.try_to_list(%{foo: :bar})
+      iex> Iteraptor.Utils.try_to_list(%{foo: :bar})
       %{foo: :bar}
-      iex> Iteraptor.Updater.try_to_list(%{"5" => :foo, "1" => :bar})
+      iex> Iteraptor.Utils.try_to_list(%{"5" => :foo, "1" => :bar})
       %{"5" => :foo, "1" => :bar}
   """
   @spec try_to_list(any()) :: List.t | any()
@@ -251,21 +257,21 @@ defmodule Iteraptor.Updater do
 
   ## Examples:
 
-      #iex> Iteraptor.Updater.squeeze([foo: [bar: 42], foo: [baz: 3.14]])
+      #iex> Iteraptor.Utils.squeeze([foo: [bar: 42], foo: [baz: 3.14]])
       #[foo: [bar: 42, baz: 3.14]]
-      iex> Iteraptor.Updater.squeeze([foo: %{bar: 42}, foo: %{baz: 3.14}])
+      iex> Iteraptor.Utils.squeeze([foo: %{bar: 42}, foo: %{baz: 3.14}])
       [foo: %{bar: 42, baz: 3.14}]
-      iex> Iteraptor.Updater.squeeze([foo: %{bar: 42}, foo: :baz])
+      iex> Iteraptor.Utils.squeeze([foo: %{bar: 42}, foo: :baz])
       [foo: [%{bar: 42}, :baz]]
-      iex> Iteraptor.Updater.squeeze([a: [b: [c: 42]], a: [b: [d: 3.14]]])
+      iex> Iteraptor.Utils.squeeze([a: [b: [c: 42]], a: [b: [d: 3.14]]])
       [a: [b: [c: 42, d: 3.14]]]
-      iex> Iteraptor.Updater.squeeze([a: [b: [c: 42]], a: [b: %{d: 3.14}]])
+      iex> Iteraptor.Utils.squeeze([a: [b: [c: 42]], a: [b: %{d: 3.14}]])
       [a: [b: [c: 42, d: 3.14]]]
-      iex> Iteraptor.Updater.squeeze([a: [b: [c: :foo]], a: [b: [c: 3.14]]])
+      iex> Iteraptor.Utils.squeeze([a: [b: [c: :foo]], a: [b: [c: 3.14]]])
       [a: [b: [c: [:foo, 3.14]]]]
-      iex> Iteraptor.Updater.squeeze([a: [b: [:foo, :bar]], a: [b: [c: 3.14]]])
+      iex> Iteraptor.Utils.squeeze([a: [b: [:foo, :bar]], a: [b: [c: 3.14]]])
       [a: [b: [:foo, :bar, {:c, 3.14}]]]
-      iex> Iteraptor.Updater.squeeze([a: [:foo, :bar], a: [b: [c: 3.14]]])
+      iex> Iteraptor.Utils.squeeze([a: [:foo, :bar], a: [b: [c: 3.14]]])
       [a: [:foo, :bar, {:b, [c: 3.14]}]]
   """
   @spec squeeze(Map.t | Keyword.t | List.t) :: Map.t | Keyword.t | List.t

@@ -33,9 +33,7 @@ defmodule Iteraptor do
 
   """
 
-  import Iteraptor.Updater
-
-  @struct_joiner "%"
+  import Iteraptor.Utils
 
   @doc """
   Build a flatmap out of nested structure, concatenating the names of keys.
@@ -47,10 +45,10 @@ defmodule Iteraptor do
 
   ## Parameters
 
-  - `input`: nested map/list/keyword/struct to be flattened.
-  - `joiner`: the character to be used to join keys while flattening,
-  _optional_, default value is `"."`;
-  e.g. `%{a: {b: 42}}` will be flattened to `%{"a.b" => 42}`.
+  - `input`: nested map/list/keyword/struct to be flattened,  
+  - `opts`: the additional options to be passed through:  
+    — `delimiter` (_default:_ `"."`,) might be passed explicitly or
+    configured with `:iteraptor, :delimiter` application setting.
 
   ## Examples
 
@@ -91,6 +89,8 @@ defmodule Iteraptor do
       %{"a.b.c" => 42, "a.b.d.0" => nil, "a.b.d.1" => 42, "a.e.0" => :f, "a.e.1" => 42}
   """
 
+  @spec to_flatmap(Map.t | List.t | Keyword.t | Access.t, List.t) :: Map.t
+
   def to_flatmap(input, opts \\ []) when is_map(input) or is_list(input) do
     reducer =
       fn {k, v}, acc ->
@@ -99,7 +99,7 @@ defmodule Iteraptor do
             [key] -> key
             _ -> Enum.join(k, delimiter(opts))
           end
-        Map.put(acc, key, v)
+        Map.put(acc, key, v) # FIXME maybe keyword would be better?
       end
     with {_, flattened} <- reduce(input, %{}, reducer, opts), do: flattened
   end
@@ -113,10 +113,9 @@ defmodule Iteraptor do
 
   ## Parameters
 
-  - `input`: flat map to be “expanded” to nested maps/lists.
-  - `joiner`: the character to be used to “un-join” keys while flattening,
-  _optional_, default value is `"."`;
-  e.g. `%{"a.b" => 42}` will be unveiled to `%{a: {b: 42}}`.
+  - `input`: flat map to be “expanded” to nested maps/lists,  
+  - `transformer`: the transformer function to be called on all the elements,  
+  - `opts`: additional options to be passed through.
 
   ## Examples
 
@@ -146,8 +145,15 @@ defmodule Iteraptor do
       iex> %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42}
       ...> |> Iteraptor.from_flatmap
       %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
+
+      iex> %{"0.a": 42, "0.b": 42} |> Iteraptor.from_flatmap(&IO.inspect/1)
+      {[0, :a], 42}
+      {[0, :b], 42}
+      [%{a: 42, b: 42}]
   """
-  def from_flatmap(input, fun \\ nil, opts \\ []) when is_map(input) do
+  @spec from_flatmap(Map.t | List.t | Keyword.t | Access.t, Function.t, List.t) :: Map.t | List.t | Keyword.t
+
+  def from_flatmap(input, transformer \\ nil, opts \\ []) when is_map(input) do
     reducer =
       fn {k, v}, acc ->
         key =
@@ -155,60 +161,164 @@ defmodule Iteraptor do
             [k] -> [smart_convert(k)]
             list -> Enum.map(list, &smart_convert/1)
           end
-        value = if is_nil(fun), do: v, else: fun.({key, v})
+        value =
+          if is_nil(transformer) do
+            v
+          else
+            case transformer.({key, v}) do
+              {^key, any} -> any
+              any -> any
+            end
+          end
         deep_put_in(acc, {key, value}, opts)
       end
 
-    with {_, unflattened} <- reduce(input, %{}, reducer, opts),
-      do: squeeze(unflattened)
+    input
+    |> reduce(%{}, reducer, opts)
+    |> squeeze()
   end
 
   @doc """
   Iterates the given nested structure, calling the callback provided on each
-  value. The key returned is a concatenated names of all the parent keys
-  (and/or indices in a case of an array.)
+    value. The key returned is an array of all the parent keys (and/or indices
+    in a case of an array.)
 
-  The return value is the result of call to `to_flatmap`.
+  The return value is `self`.
 
   ## Parameters
 
-  - `input`:  nested map/list/keyword to be walked through.
-  - `fun`:    callback to be called on each _value_;
-  e.g. on `%{a: {b: 42}}` will be called once, with tuple `{"a.b", 42}`;
+  - `input`: nested map/list/keyword to be walked through.
+  - `fun`: callback to be called on each **`{key, value}`** pair, where `key`
+    is an array or deeply nested keys;
+  e.g. on `%{a: {b: 42}}` will be called once, with tuple `{[:a, :b], 42}`;
   - `opts`: the options to be passed to the iteration
-    - `joiner`: the character to be used to join keys while flattening,
-      is returned to the callback as iterated key name;
-      _optional_, default value is `"."`;
+    - `yield`: `[:all | :maps | :keywords |` what to yield; _default:_ `nil`
+    for yielding _values only_.
 
   ## Examples
 
-      iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end)
-      {"a.b.c", 42}
+      iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(&IO.inspect/1)
+      {[:a, :b, :c], 42}
       %{a: %{b: %{c: 42}}}
 
-      iex> %{a: %{b: %{c: 42}}}
-      ...> |> Iteraptor.each(fn {k, v} -> IO.inspect({k, v}) end, full_parent: :tuple)
-      {{:a, :b, :c}, 42}
+      iex> %{a: %{b: %{c: 42}}} |> Iteraptor.each(&IO.inspect/1, yield: :all)
+      {[:a], %{b: %{c: 42}}}
+      {[:a, :b], %{c: 42}}
+      {[:a, :b, :c], 42}
       %{a: %{b: %{c: 42}}}
   """
+
+  @spec each(Map.t | Keyword.t | List.t | Access.t, Function.t, List.t) :: Map.t | Keyword.t | List.t | Access.t
+
   def each(input, fun, opts \\ []) do
     map(input, fun, opts)
     input
   end
 
+  @doc """
+  Maps the given nested structure, calling the callback provided on each value.
+    The key returned is a concatenated names of all the parent keys
+  (and/or indices in a case of an array.)
+
+  The return value is the result of subsequent calls to the transformer given.
+
+  ## Parameters
+
+  - `input`: nested map/list/keyword to be mapped.
+  - `fun`: callback to be called on each **`{key, value}`** pair, where `key`
+    is an array or deeply nested keys;
+  e.g. on `%{a: {b: 42}}` will be called once, with tuple `{[:a, :b], 42}`;
+  - `opts`: the options to be passed to the iteration
+    - `yield`: `[:all | :maps | :keywords |` what to yield; _default:_ `nil`
+    for yielding _values only_.
+
+  ## Examples
+
+      iex> %{a: %{b: %{c: 42}}} |> Iteraptor.map(fn {_, v} -> v * 2 end)
+      %{a: %{b: %{c: 84}}}
+
+      iex> %{a: %{b: %{c: 42}}} |> Iteraptor.map(fn {k, _} -> Enum.join(k) end)
+      %{a: %{b: %{c: "abc"}}}
+
+      iex> %{a: %{b: %{c: 42}}}
+      ...> |> Iteraptor.map(fn
+      ...>      {[_], _} = self -> self
+      ...>      {[_, _], _} -> "YAY"
+      ...>    end, yield: :all)
+      %{a: %{b: "YAY"}}
+  """
+
+  @spec map(Map.t | Keyword.t | List.t | Access.t, Function.t, List.t) :: Map.t | Keyword.t | List.t | Access.t
+
   def map(input, fun, opts \\ []) do
     unless is_function(fun, 1), do: raise "Function or arity fun/1 is required"
-    traverse(input, fun, opts, {[], nil})
+    {result, _} = traverse(input, fun, opts, {[], nil})
+    result
   end
 
-  def reduce(input, acc, fun, opts \\ []) do
+  @doc """
+  Iteration with reducing. The function of arity `2`, called back on each
+    iteration with `{k, v}` pair _and_ an accumulator is accepted.
+
+  The return value is the result of the last call to the passed reducer function.
+
+  ## Parameters
+
+  - `input`: nested map/list/keyword to be mapped.
+  - `fun`: callback to be called on each **`{key, value}, acc`** pair,
+    where `key` is an array or deeply nested keys, `value` is the value and
+    `acc` is the accumulator;
+  - `opts`: the options to be passed to the iteration
+    - `yield`: `[:all | :maps | :keywords |` what to yield; _default:_ `nil`
+    for yielding _values only_.
+
+  ## Examples
+
+      iex> %{a: %{b: %{c: 42}}}
+      ...> |> Iteraptor.reduce([], fn {k, _}, acc ->
+      ...>      [Enum.join(k, "_") | acc]
+      ...>    end, yield: :all)
+      ...> |> :lists.reverse()
+      ["a", "a_b", "a_b_c"]
+  """
+
+  @spec reduce(Map.t | Keyword.t | List.t | Access.t, Access.t, Function.t, List.t) :: Map.t | Keyword.t | List.t | Access.t
+
+  def reduce(input, acc \\ %{}, fun, opts \\ []) do
     unless is_function(fun, 2), do: raise "Function or arity fun/2 is required"
-    fun_wrapper =
-      fn kv, acc ->
-        {kv, fun.(kv, acc)}
-      end
-    traverse(input, fun_wrapper, opts, {[], acc})
+    fun_wrapper = fn kv, acc -> {kv, fun.(kv, acc)} end
+    {_, result} = traverse(input, fun_wrapper, opts, {[], acc})
+    result
   end
+
+  @doc """
+  Iteration with mapping and reducing. The function of arity `2`, called back on each
+    iteration with `{k, v}` pair _and_ an accumulator is accepted.
+
+  The return value is the tuple, consisting of mapped input _and_ the
+    accumulator from the last call to the passed map-reducer.
+
+  ## Parameters
+
+  - `input`: nested map/list/keyword to be mapped.
+  - `fun`: callback to be called on each **`{key, value}, acc`** pair,
+    where `key` is an array or deeply nested keys, `value` is the value and
+    `acc` is the accumulator;
+  - `opts`: the options to be passed to the iteration
+    - `yield`: `[:all | :maps | :keywords |` what to yield; _default:_ `nil`
+    for yielding _values only_.
+
+  ## Examples
+
+      iex> %{a: %{b: %{c: 42}}}
+      ...> |> Iteraptor.map_reduce([], fn
+      ...>      {k, %{} = v}, acc -> {{k, v}, [Enum.join(k, ".") | acc]}
+      ...>      {k, v}, acc -> {{k, v * 2}, [Enum.join(k, ".") <> "=" | acc]}
+      ...>    end, yield: :all)
+      {%{a: %{b: %{c: 42}}}, ["a.b.c=", "a.b", "a"]}
+  """
+
+  @spec map_reduce(Map.t | Keyword.t | List.t | Access.t, Access.t, Function.t, List.t) :: {Map.t | Keyword.t | List.t | Access.t, any()}
 
   def map_reduce(input, acc, fun, opts \\ []) do
     unless is_function(fun, 2), do: raise "Function or arity fun/2 is required"

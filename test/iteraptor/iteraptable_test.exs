@@ -1,7 +1,7 @@
 defmodule Iteraptor.Iteraptable.Test do
   use ExUnit.Case
   require Logger
-  import ExUnit.CaptureLog
+#  import ExUnit.CaptureLog
   doctest Iteraptor.Iteraptable
 
 # defmodule Iteraptor.Struct do
