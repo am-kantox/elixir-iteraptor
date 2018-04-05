@@ -289,8 +289,10 @@ defmodule Iteraptor do
   @spec reduce(Map.t() | Keyword.t() | List.t() | Access.t(), Access.t(), Function.t(), List.t()) ::
           Map.t() | Keyword.t() | List.t() | Access.t()
 
-  def reduce(input, acc \\ %{}, fun, opts \\ []) do
+  def reduce(input, acc \\ nil, fun, opts \\ []) do
     unless is_function(fun, 2), do: raise("Function or arity fun/2 is required")
+
+    acc = if is_nil(acc), do: (with {_, into} <- type(input), do: into), else: acc
     fun_wrapper = fn kv, acc -> {kv, fun.(kv, acc)} end
     {_, result} = traverse(input, fun_wrapper, opts, {[], acc})
     result
@@ -333,6 +335,44 @@ defmodule Iteraptor do
   def map_reduce(input, acc \\ %{}, fun, opts \\ []) do
     unless is_function(fun, 2), do: raise("Function or arity fun/2 is required")
     traverse(input, fun, opts, {[], acc})
+  end
+
+  @doc """
+  Filters the deeply nested term, optionally calling the function on
+  filtered entries.
+
+  The return value is the filtered term.
+
+  ## Parameters
+
+  - `input`: nested map/list/keyword to be filtered.
+  - `fun`: callback to be called on each **`{key, value}`** to filter entries.
+  - `opts`: the options to be passed to the iteration
+    - `yield`: `[:all | :maps | :keywords |` what to yield; _default:_ `nil`
+    for yielding _values only_.
+
+  ## Examples
+
+      iex> %{a: %{b: 42, e: %{f: 3.14, c: 42}, d: %{c: 42}}, c: 42, d: 3.14}
+      ...> |> Iteraptor.filter(fn {key, _} -> :c in key end, yield: :none)
+      %{a: %{e: %{c: 42}, d: %{c: 42}}, c: 42}
+  """
+
+  @spec filter(
+          Map.t() | Keyword.t() | List.t() | Access.t(),
+          Function.t(),
+          List.t()
+        ) :: {Map.t() | Keyword.t() | List.t() | Access.t(), any()}
+
+  def filter(input, fun, opts \\ []) do
+    unless is_function(fun, 1), do: raise("Function or arity fun/1 is required")
+    acc = with {_, into} <- type(input), do: into
+    fun_wrapper =
+      fn {k, v}, acc ->
+        if fun.({k, v}), do: {{k, v}, deep_put_in(acc, {k, v}, opts)}, else: {{k, v}, acc}
+      end
+    {_, result} = traverse(input, fun_wrapper, opts, {[], acc})
+    result
   end
 
   ##############################################################################

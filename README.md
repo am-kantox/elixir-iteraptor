@@ -15,6 +15,8 @@
     to reduce a deeply nested map/list/keyword;
   * [`Iteraptor.map_reduce/4`](https://hexdocs.pm/iteraptor/Iteraptor.html#map_reduce/4)
     to map and reduce a deeply nested map/list/keyword;
+  * [`Iteraptor.filter/3`](https://hexdocs.pm/iteraptor/Iteraptor.html#filter/3)
+    to filter a deeply nested map/list/keyword;
   * [`Iteraptor.to_flatmap/2`](https://hexdocs.pm/iteraptor/Iteraptor.html#to_flatmap/2)
     to flatten a deeply nested map/list/keyword into
     flatten map with concatenated keys;
@@ -74,6 +76,11 @@ iex> %{a: %{b: %{c: 42}}}
 ...>      {k, v}, acc -> {{k, v * 2}, [Enum.join(k, ".") <> "=" | acc]}
 ...>    end, yield: :all)
 {%{a: %{b: %{c: 42}}}, ["a.b.c=", "a.b", "a"]}
+
+# filter
+iex> %{a: %{b: 42, e: %{f: 3.14, c: 42}, d: %{c: 42}}, c: 42, d: 3.14}
+...> |> Iteraptor.filter(fn {key, _} -> :c in key end, yield: :none)
+%{a: %{e: %{c: 42}, d: %{c: 42}}, c: 42}
 ```
 
 #### Flattening
