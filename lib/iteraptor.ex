@@ -87,6 +87,10 @@ defmodule Iteraptor do
 
       iex> %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}} |> Iteraptor.to_flatmap
       %{"a.b.c" => 42, "a.b.d.0" => nil, "a.b.d.1" => 42, "a.e.0" => :f, "a.e.1" => 42}
+
+      iex> %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
+      ...> |> Iteraptor.to_flatmap(delimiter: "_")
+      %{"a_b_c" => 42, "a_b_d_0" => nil, "a_b_d_1" => 42, "a_e_0" => :f, "a_e_1" => 42}
   """
 
   @spec to_flatmap(Map.t | List.t | Keyword.t | Access.t, List.t) :: Map.t
@@ -108,8 +112,9 @@ defmodule Iteraptor do
   Build a nested structure out of a flatmap given, decomposing the names of keys
   and handling lists carefully.
 
-      %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42} |> Iteraptor.from_flatmap
-      %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
+      %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42}
+      |> Iteraptor.from_flatmap
+      #⇒ %{a: %{b: %{c: 42, d: [nil, 42]}, e: [:f, 42]}}
 
   ## Parameters
 
@@ -320,7 +325,7 @@ defmodule Iteraptor do
 
   @spec map_reduce(Map.t | Keyword.t | List.t | Access.t, Access.t, Function.t, List.t) :: {Map.t | Keyword.t | List.t | Access.t, any()}
 
-  def map_reduce(input, acc, fun, opts \\ []) do
+  def map_reduce(input, acc \\ %{}, fun, opts \\ []) do
     unless is_function(fun, 2), do: raise "Function or arity fun/2 is required"
     traverse(input, fun, opts, {[], acc})
   end

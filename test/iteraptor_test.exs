@@ -5,9 +5,9 @@ defmodule Iteraptor.Test do
   doctest Iteraptor
 
   @empty [map: %{}, list: []]
-  @list [:a1, %{ a2: 42, a3: 3.1415, a4: [:a5, true], a6: %{ a7: 42 } }, ~w|a8 a9|a, :a10]
+  @list [:a1, %{a2: 42, a3: 3.1415, a4: [:a5, true], a6: %{a7: 42}}, ~w|a8 a9|a, :a10]
   # @map %{a1: 42, a2: %{ a3: 42, a4: %{ a5: 42, a6: ~w|a7 a8|a}}}
-  @keyword [a1: 42, a2: %{ a3: 42, a4: %{ a5: 42, a6: [a7: 42, a7: 3.14, a8: 42]}}]
+  @keyword [a1: 42, a2: %{a3: 42, a4: %{a5: 42, a6: [a7: 42, a7: 3.14, a8: 42]}}]
   @nest %{top: %{key: 42, subkey: %{key: 3.1415}}, keys: ~w|1 2 3|}
 
   test "handles empty input properly" do

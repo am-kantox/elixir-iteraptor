@@ -58,7 +58,7 @@ defmodule Iteraptor.Extras do
   def each_cons([], _, acc), do: acc
   def each_cons(list, n, acc) when is_list(list) and length(list) < n,
     do: Enum.reverse(acc)
-  def each_cons(list = [_ | tail], n, acc),
+  def each_cons([_ | tail] = list, n, acc),
     do: each_cons(tail, n, [Enum.take(list, n) | acc])
   def each_cons(map, n, acc) when is_map(map),
     do: each_cons(Enum.to_list(map), n, acc)

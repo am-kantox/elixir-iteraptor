@@ -2,18 +2,21 @@ defmodule Iteraptor.Mixfile do
   use Mix.Project
 
   @app :iteraptor
+  @version "1.0.0-rc1"
 
   def project do
     [
       app: @app,
-      version: "0.9.0",
+      version: @version,
       elixir: "~> 1.4",
       elixirc_paths: elixirc_paths(Mix.env),
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
       description: description(),
       package: package(),
-      deps: deps()
+      deps: deps(),
+      docs: docs(),
+      xref: [exclude: []]
     ]
   end
 
@@ -47,6 +50,28 @@ defmodule Iteraptor.Mixfile do
      licenses: ["MIT"],
      links: %{"GitHub" => "https://github.com/am-kantox/elixir-iteraptor",
               "Docs" => "http://hexdocs.pm/iteraptor"}]
+  end
+
+  defp docs() do
+    [
+      main: @app,
+      source_ref: "v#{@version}",
+      canonical: "http://hexdocs.pm/#{@app}",
+      # logo: "stuff/images/logo.png",
+      source_url: "https://github.com/am-kantox/#{@app}",
+      # extras: [ "stuff/pages/intro.md" ],
+      groups_for_modules: [
+        # Iteraptor
+
+        Extras: [
+          Iteraptor.Iteraptable,
+          Iteraptor.Extras
+        ],
+        Internals: [
+          Iteraptor.Utils
+        ]
+      ]
+    ]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
