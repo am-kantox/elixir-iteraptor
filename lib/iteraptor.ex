@@ -320,7 +320,7 @@ defmodule Iteraptor do
       ...>      {k, %{} = v}, acc -> {{k, v}, [Enum.join(k, ".") | acc]}
       ...>      {k, v}, acc -> {{k, v * 2}, [Enum.join(k, ".") <> "=" | acc]}
       ...>    end, yield: :all)
-      {%{a: %{b: %{c: 42}}}, ["a.b.c=", "a.b", "a"]}
+      {%{a: %{b: %{c: 84}}}, ["a.b.c=", "a.b", "a"]}
   """
 
   @spec map_reduce(
@@ -375,11 +375,11 @@ defmodule Iteraptor do
             {value, acc} = traverse(v, fun, opts, {deep, acc})
             {{k, value}, acc}
 
-          {^deep, _} ->
+          {^deep, v} ->
             {value, acc} = traverse(v, fun, opts, {deep, acc})
             {{k, value}, acc}
 
-          {^k, _} ->
+          {^k, v} ->
             {value, acc} = traverse(v, fun, opts, {deep, acc})
             {{k, value}, acc}
 
