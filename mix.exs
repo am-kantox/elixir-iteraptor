@@ -2,7 +2,7 @@ defmodule Iteraptor.Mixfile do
   use Mix.Project
 
   @app :iteraptor
-  @version "1.0.0-rc1"
+  @version "1.0.0"
 
   def project do
     [
@@ -58,7 +58,7 @@ defmodule Iteraptor.Mixfile do
 
   defp docs() do
     [
-      main: @app,
+      # main: @app,
       source_ref: "v#{@version}",
       canonical: "http://hexdocs.pm/#{@app}",
       # logo: "stuff/images/logo.png",
