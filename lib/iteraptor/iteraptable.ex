@@ -14,14 +14,14 @@ defmodule Iteraptor.Iteraptable do
   @codepieces [
     enumerable:
       quote do
-
         defimpl Enumerable, for: __MODULE__ do
           def slice(enumerable) do
             {:error, __MODULE__}
           end
 
           def count(map) do
-            {:ok, map |> Map.from_struct |> map_size} # do not count :__struct__
+            # do not count :__struct__
+            {:ok, map |> Map.from_struct() |> map_size}
           end
 
           def member?(_, {:__struct__, _}) do
@@ -37,32 +37,31 @@ defmodule Iteraptor.Iteraptable do
           end
 
           def reduce(map, acc, fun) do
-            do_reduce((map |> Map.from_struct |> :maps.to_list), acc, fun)
+            do_reduce(map |> Map.from_struct() |> :maps.to_list(), acc, fun)
           end
 
-          defp do_reduce(_,       {:halt, acc}, _fun),   do: {:halted, acc}
-          defp do_reduce(list,    {:suspend, acc}, fun), do: {:suspended, acc, &do_reduce(list, &1, fun)}
-          defp do_reduce([],      {:cont, acc}, _fun),   do: {:done, acc}
-          defp do_reduce([h | t], {:cont, acc}, fun),    do: do_reduce(t, fun.(h, acc), fun)
+          defp do_reduce(_, {:halt, acc}, _fun), do: {:halted, acc}
+
+          defp do_reduce(list, {:suspend, acc}, fun),
+            do: {:suspended, acc, &do_reduce(list, &1, fun)}
+
+          defp do_reduce([], {:cont, acc}, _fun), do: {:done, acc}
+          defp do_reduce([h | t], {:cont, acc}, fun), do: do_reduce(t, fun.(h, acc), fun)
         end
-
       end,
-
     collectable:
       quote do
-
         defimpl Collectable, for: __MODULE__ do
           def into(original) do
-            {original, fn
-              map, {:cont, {k, v}} -> :maps.put(k, v, map)
-              map, :done -> map
-              _,   :halt -> :ok
-            end}
+            {original,
+             fn
+               map, {:cont, {k, v}} -> :maps.put(k, v, map)
+               map, :done -> map
+               _, :halt -> :ok
+             end}
           end
         end
-
       end,
-
     access:
       quote do
         @behaviour Access
@@ -86,10 +85,16 @@ defmodule Iteraptor.Iteraptable do
           current = get(term, key)
 
           case fun.(current) do
-            {get, update} -> {get, %{term | key => update}}
-            :pop -> {current, %{term | key => nil}}
+            {get, update} ->
+              {get, %{term | key => update}}
+
+            :pop ->
+              {current, %{term | key => nil}}
+
             other ->
-              raise "the given function must return a two-element tuple or :pop, got: #{inspect(other)}"
+              raise "the given function must return a two-element tuple or :pop, got: #{
+                      inspect(other)
+                    }"
           end
         end
 

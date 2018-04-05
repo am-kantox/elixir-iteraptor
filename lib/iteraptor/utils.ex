@@ -12,7 +12,7 @@ defmodule Iteraptor.Utils do
     defexception [:term, :function, :message]
 
     def exception(term: term, function: function) do
-      message = "Unsupported term #{inspect term} in call to #{function}."
+      message = "Unsupported term #{inspect(term)} in call to #{function}."
       %Iteraptor.Utils.Unsupported{term: term, function: function, message: message}
     end
   end
@@ -33,15 +33,17 @@ defmodule Iteraptor.Utils do
       iex> Iteraptor.Utils.type(42)
       {:invalid, nil}
   """
-  @spec type(Map.t | Keyword.t | List.t | any()) :: {atom(), %{} | [] | nil}
+  @spec type(Map.t() | Keyword.t() | List.t() | any()) :: {atom(), %{} | [] | nil}
   def type(input) do
     case Enumerable.impl_for(input) do
       Enumerable.List ->
-        {(if Keyword.keyword?(input), do: Keyword, else: List), []}
+        {if(Keyword.keyword?(input), do: Keyword, else: List), []}
+
       Enumerable.Map ->
         {Map, %{}}
+
       _ ->
-      # FIXME struct instantiation is potentially dangerous
+        # FIXME struct instantiation is potentially dangerous
         if is_map(input),
           do: {input.__struct__, struct(input.__struct__)},
           else: {:invalid, nil}
@@ -62,20 +64,22 @@ defmodule Iteraptor.Utils do
       iex> Iteraptor.Utils.dig([k1: %{k2: [k3: :value]}])
       {:ok, {[:k1, :k2, :k3], :value}}
   """
-  @spec dig(Map.t | Keyword.t, List.t) :: {:ok, {List.t, any()}} | {:error, any()}
+  @spec dig(Map.t() | Keyword.t(), List.t()) :: {:ok, {List.t(), any()}} | {:error, any()}
   def dig(input, acc \\ [])
   def dig(_, {:error, _} = error), do: error
+
   def dig(input, acc) when is_map(input) do
     case Map.keys(input) do
       [k] -> dig(input[k], [k | acc])
       _ -> {:error, input}
     end
   end
+
   def dig([{k, v}], acc), do: dig(v, [k | acc])
   def dig(input, _) when is_list(input), do: {:error, input}
   def dig(input, acc), do: {:ok, {:lists.reverse(acc), input}}
 
-  @spec dig!(Map.t | Keyword.t, List.t) :: {List.t, any()} | no_return()
+  @spec dig!(Map.t() | Keyword.t(), List.t()) :: {List.t(), any()} | no_return()
   def dig!(input, acc \\ []) do
     case dig(input, acc) do
       {:ok, result} -> result
@@ -86,7 +90,7 @@ defmodule Iteraptor.Utils do
   @delimiter Application.get_env(:iteraptor, :delimiter, ".")
 
   @doc false
-  @spec delimiter(List.t) :: binary()
+  @spec delimiter(List.t()) :: binary()
   def delimiter(opts) when is_list(opts), do: opts[:delimiter] || @delimiter
 
   @doc false
@@ -112,9 +116,10 @@ defmodule Iteraptor.Utils do
       iex> Iteraptor.Utils.split("a.b.c.d", transform: :safe)
       [:a, :b, :c, :d]
   """
-  @spec split(binary(), Keyword.t) :: List.t
+  @spec split(binary(), Keyword.t()) :: List.t()
   def split(input, opts \\ []) when is_binary(input) do
     result = String.split(input, delimiter(opts))
+
     case opts[:transform] do
       :safe -> Enum.map(result, &String.to_existing_atom/1)
       :unsafe -> Enum.map(result, &String.to_atom/1)
@@ -132,7 +137,7 @@ defmodule Iteraptor.Utils do
       iex> Iteraptor.Utils.join(~w|a b c d|, delimiter: "_")
       "a_b_c_d"
   """
-  @spec join(List.t, Keyword.t) :: binary()
+  @spec join(List.t(), Keyword.t()) :: binary()
   def join(input, opts \\ []) when is_list(input) do
     Enum.join(input, delimiter(opts))
   end
@@ -157,8 +162,10 @@ defmodule Iteraptor.Utils do
       %{a: [:foo, %{b: 42}, {:b, :foo}]}
   """
 
-  @spec deep_put_in(Map.t | Keyword.t, {List.t, any()}, Keyword.t) :: Map.t | Keyword.t
+  @spec deep_put_in(Map.t() | Keyword.t(), {List.t(), any()}, Keyword.t()) ::
+          Map.t() | Keyword.t()
   def deep_put_in(target, key_value, opts \\ [])
+
   def deep_put_in(target, {[key], value}, _opts) do
     put_in(target, [key], value)
   end
@@ -171,8 +178,7 @@ defmodule Iteraptor.Utils do
     {_, target} =
       Enum.reduce(head, {[], target}, fn k, {keys, acc} ->
         keys = keys ++ [k]
-        {_, value} =
-          get_and_update_in(acc, keys, &{&1, (if is_nil(&1), do: into, else: &1)})
+        {_, value} = get_and_update_in(acc, keys, &{&1, if(is_nil(&1), do: into, else: &1)})
         {keys, value}
       end)
 
@@ -187,9 +193,15 @@ defmodule Iteraptor.Utils do
           end)
 
         result
-      curr when is_list(curr) -> put_in(target, key, curr ++ [value])
-      curr when is_map(curr) -> put_in(target, key, Map.to_list(curr) ++ [value])
-      curr -> put_in(target, key, [curr, value])
+
+      curr when is_list(curr) ->
+        put_in(target, key, curr ++ [value])
+
+      curr when is_map(curr) ->
+        put_in(target, key, Map.to_list(curr) ++ [value])
+
+      curr ->
+        put_in(target, key, [curr, value])
     end
   end
 
@@ -209,19 +221,22 @@ defmodule Iteraptor.Utils do
       iex> Iteraptor.Utils.quacks_as_list(42)
       false
   """
-  @spec quacks_as_list(Map.t | Keyword.t | any()) :: true | false
+  @spec quacks_as_list(Map.t() | Keyword.t() | any()) :: true | false
   def quacks_as_list(input) when is_list(input) or is_map(input) do
     input
     |> Enum.map(fn
-         {k, _} ->
-           case k |> to_string() |> Integer.parse() do
-             {value, ""} -> value
-             _ -> nil
-           end
-         _ -> nil
-       end)
-    |> Enum.sort() == (0..Enum.count(input) - 1 |> Enum.to_list)
+      {k, _} ->
+        case k |> to_string() |> Integer.parse() do
+          {value, ""} -> value
+          _ -> nil
+        end
+
+      _ ->
+        nil
+    end)
+    |> Enum.sort() == 0..(Enum.count(input) - 1) |> Enum.to_list()
   end
+
   def quacks_as_list(_), do: false
 
   @doc """
@@ -239,13 +254,13 @@ defmodule Iteraptor.Utils do
       iex> Iteraptor.Utils.try_to_list(%{"5" => :foo, "1" => :bar})
       %{"5" => :foo, "1" => :bar}
   """
-  @spec try_to_list(any()) :: List.t | any()
+  @spec try_to_list(any()) :: List.t() | any()
   def try_to_list(input) do
     if quacks_as_list(input) do
       input
       |> Enum.sort(fn {k1, _}, {k2, _} ->
-           String.to_integer(to_string(k1)) < String.to_integer(to_string(k2))
-         end)
+        String.to_integer(to_string(k1)) < String.to_integer(to_string(k2))
+      end)
       |> Enum.map(fn {_, v} -> v end)
     else
       input
@@ -274,7 +289,7 @@ defmodule Iteraptor.Utils do
       iex> Iteraptor.Utils.squeeze([a: [:foo, :bar], a: [b: [c: 3.14]]])
       [a: [:foo, :bar, {:b, [c: 3.14]}]]
   """
-  @spec squeeze(Map.t | Keyword.t | List.t) :: Map.t | Keyword.t | List.t
+  @spec squeeze(Map.t() | Keyword.t() | List.t()) :: Map.t() | Keyword.t() | List.t()
   def squeeze(input) when is_map(input) or is_list(input) do
     {type, into} = type(input)
 
@@ -283,42 +298,66 @@ defmodule Iteraptor.Utils do
         {k, v}, {acc, orphans} ->
           {_, neu} =
             case type do
-              List -> {nil, [{k, v} | acc]}
+              List ->
+                {nil, [{k, v} | acc]}
+
               _ ->
                 get_and_update_in(acc, [k], fn
-                  nil -> {nil, v}
+                  nil ->
+                    {nil, v}
+
                   map when is_map(map) ->
                     case v do
                       %{} -> {map, Map.merge(map, v)}
                       _ -> {map, [map, v]}
                     end
+
                   list when is_list(list) ->
                     case v do
-                      [] -> {list, list}
-                      [_|_] -> {list, list ++ v}
-                      %{} -> {list, list ++ Map.to_list(v)} # FIXME opts? needed?
-                      _ -> {list, list ++ [v]}
+                      [] ->
+                        {list, list}
+
+                      [_ | _] ->
+                        {list, list ++ v}
+
+                      # FIXME opts? needed?
+                      %{} ->
+                        {list, list ++ Map.to_list(v)}
+
+                      _ ->
+                        {list, list ++ [v]}
                     end
-                  other -> {other, [other, v]}
+
+                  other ->
+                    {other, [other, v]}
                 end)
             end
+
           {neu, orphans}
+
         v, {acc, orphans} ->
           case type do
-            Keyword -> {[v | acc], orphans} # FIXME raise? this cannot happen
-            List -> {[v | acc], orphans}
-            Map -> {Map.put(acc, orphans, v), orphans + 1}
+            # FIXME raise? this cannot happen
+            Keyword ->
+              {[v | acc], orphans}
+
+            List ->
+              {[v | acc], orphans}
+
+            Map ->
+              {Map.put(acc, orphans, v), orphans + 1}
           end
       end)
 
     result
     |> Enum.map(fn
-         {k, v} when is_list(v) -> {k, v |> squeeze() |> :lists.reverse()}
-         {k, v} -> {k, squeeze(v)}
-         v -> v
-       end)
+      {k, v} when is_list(v) -> {k, v |> squeeze() |> :lists.reverse()}
+      {k, v} -> {k, squeeze(v)}
+      v -> v
+    end)
     |> Enum.into(into)
     |> try_to_list()
   end
+
   def squeeze(input), do: input
 end

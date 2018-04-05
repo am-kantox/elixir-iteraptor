@@ -15,15 +15,16 @@ defmodule Iteraptor.Test do
     |> Enum.each(fn key ->
       # assert Iteraptor.each(@empty[key], & &1) == @empty[key]
       assert capture_log(fn ->
-        @empty[key] |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
-      end) == ""
+               @empty[key] |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
+             end) == ""
     end)
   end
 
   test "map / each prints out the iterated values" do
-    result = capture_log(fn ->
-      @nest |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
-    end)
+    result =
+      capture_log(fn ->
+        @nest |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
+      end)
 
     assert result =~ "{[:keys, 0], \"1\"}"
     assert result =~ "{[:keys, 1], \"2\"}"
@@ -33,9 +34,10 @@ defmodule Iteraptor.Test do
   end
 
   test "map[:full_parent] / each prints out the iterated values" do
-    result = capture_log(fn ->
-      @nest |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
-    end)
+    result =
+      capture_log(fn ->
+        @nest |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
+      end)
 
     assert result =~ "[:keys, 0], \"1\"}"
     assert result =~ "[:keys, 1], \"2\"}"
@@ -45,9 +47,10 @@ defmodule Iteraptor.Test do
   end
 
   test "list / each prints out the iterated values" do
-    result = capture_log(fn ->
-      @list |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
-    end)
+    result =
+      capture_log(fn ->
+        @list |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
+      end)
 
     assert result =~ "{[0], :a1}"
     assert result =~ "{[1, :a2], 42}"
@@ -61,9 +64,10 @@ defmodule Iteraptor.Test do
   end
 
   test "keyword / each prints out the iterated values" do
-    result = capture_log(fn ->
-      @keyword |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
-    end)
+    result =
+      capture_log(fn ->
+        @keyword |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end)
+      end)
 
     assert result =~ "{[:a1], 42}"
     assert result =~ "{[:a2, :a3], 42}"
@@ -78,6 +82,4 @@ defmodule Iteraptor.Test do
       assert(input == Iteraptor.each(input, fn _ -> :ok end, full_parent: full_parent))
     end)
   end
-
-
 end

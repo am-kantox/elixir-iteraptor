@@ -19,20 +19,24 @@ defmodule Iteraptor.Extras do
       iex> Iteraptor.Extras.bury(42, ~w|a b c d|a, 42)
       ** (Iteraptor.Utils.Unsupported) Unsupported term 42 in call to Iteraptor.Extras.bury/4.
   """
-  @spec bury(Access.t, List.t, any(), :default | :map | :keyword | Keyword.t) :: Access.t
+  @spec bury(Access.t(), List.t(), any(), :default | :map | :keyword | Keyword.t()) :: Access.t()
   def bury(term, key, value, opts \\ [into: :default])
+
   def bury(term, key, value, into: :default) do
     {type, into} = Iteraptor.Utils.type(term)
+
     case type do
       :invalid ->
         raise Iteraptor.Utils.Unsupported, term: term, function: "Iteraptor.Extras.bury/4"
-      _ -> bury(term, key, value, into: into)
+
+      _ ->
+        bury(term, key, value, into: into)
     end
   end
-  def bury(term, key, value, into: :map),
-    do: bury(term, key, value, into: %{})
-  def bury(term, key, value, into: :keyword),
-    do: bury(term, key, value, into: [])
+
+  def bury(term, key, value, into: :map), do: bury(term, key, value, into: %{})
+  def bury(term, key, value, into: :keyword), do: bury(term, key, value, into: [])
+
   def bury(term, key, value, into: into),
     do: Iteraptor.Utils.deep_put_in(term, {key, value}, into: into)
 
@@ -52,16 +56,14 @@ defmodule Iteraptor.Extras do
       ["let", "ett", "tte", "ter", "ers"]
   """
 
-  @spec each_cons(List.t | Map.t | binary(), integer(), List.t) :: List.t
+  @spec each_cons(List.t() | Map.t() | binary(), integer(), List.t()) :: List.t()
 
   def each_cons(list, n \\ 2, acc \\ [])
   def each_cons([], _, acc), do: acc
-  def each_cons(list, n, acc) when is_list(list) and length(list) < n,
-    do: Enum.reverse(acc)
-  def each_cons([_ | tail] = list, n, acc),
-    do: each_cons(tail, n, [Enum.take(list, n) | acc])
-  def each_cons(map, n, acc) when is_map(map),
-    do: each_cons(Enum.to_list(map), n, acc)
+  def each_cons(list, n, acc) when is_list(list) and length(list) < n, do: Enum.reverse(acc)
+  def each_cons([_ | tail] = list, n, acc), do: each_cons(tail, n, [Enum.take(list, n) | acc])
+  def each_cons(map, n, acc) when is_map(map), do: each_cons(Enum.to_list(map), n, acc)
+
   def each_cons(string, n, acc) when is_binary(string) do
     string
     |> to_charlist()

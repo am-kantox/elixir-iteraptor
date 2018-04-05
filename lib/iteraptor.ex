@@ -93,18 +93,20 @@ defmodule Iteraptor do
       %{"a_b_c" => 42, "a_b_d_0" => nil, "a_b_d_1" => 42, "a_e_0" => :f, "a_e_1" => 42}
   """
 
-  @spec to_flatmap(Map.t | List.t | Keyword.t | Access.t, List.t) :: Map.t
+  @spec to_flatmap(Map.t() | List.t() | Keyword.t() | Access.t(), List.t()) :: Map.t()
 
   def to_flatmap(input, opts \\ []) when is_map(input) or is_list(input) do
-    reducer =
-      fn {k, v}, acc ->
-        key =
-          case k do
-            [key] -> key
-            _ -> Enum.join(k, delimiter(opts))
-          end
-        Map.put(acc, key, v) # FIXME maybe keyword would be better?
-      end
+    reducer = fn {k, v}, acc ->
+      key =
+        case k do
+          [key] -> key
+          _ -> Enum.join(k, delimiter(opts))
+        end
+
+      # FIXME maybe keyword would be better?
+      Map.put(acc, key, v)
+    end
+
     with {_, flattened} <- reduce(input, %{}, reducer, opts), do: flattened
   end
 
@@ -156,27 +158,29 @@ defmodule Iteraptor do
       {[0, :b], 42}
       [%{a: 42, b: 42}]
   """
-  @spec from_flatmap(Map.t | List.t | Keyword.t | Access.t, Function.t, List.t) :: Map.t | List.t | Keyword.t
+  @spec from_flatmap(Map.t() | List.t() | Keyword.t() | Access.t(), Function.t(), List.t()) ::
+          Map.t() | List.t() | Keyword.t()
 
   def from_flatmap(input, transformer \\ nil, opts \\ []) when is_map(input) do
-    reducer =
-      fn {k, v}, acc ->
-        key =
-          case k |> Enum.join(delimiter(opts)) |> String.split(delimiter(opts)) do
-            [k] -> [smart_convert(k)]
-            list -> Enum.map(list, &smart_convert/1)
+    reducer = fn {k, v}, acc ->
+      key =
+        case k |> Enum.join(delimiter(opts)) |> String.split(delimiter(opts)) do
+          [k] -> [smart_convert(k)]
+          list -> Enum.map(list, &smart_convert/1)
+        end
+
+      value =
+        if is_nil(transformer) do
+          v
+        else
+          case transformer.({key, v}) do
+            {^key, any} -> any
+            any -> any
           end
-        value =
-          if is_nil(transformer) do
-            v
-          else
-            case transformer.({key, v}) do
-              {^key, any} -> any
-              any -> any
-            end
-          end
-        deep_put_in(acc, {key, value}, opts)
-      end
+        end
+
+      deep_put_in(acc, {key, value}, opts)
+    end
 
     input
     |> reduce(%{}, reducer, opts)
@@ -213,7 +217,8 @@ defmodule Iteraptor do
       %{a: %{b: %{c: 42}}}
   """
 
-  @spec each(Map.t | Keyword.t | List.t | Access.t, Function.t, List.t) :: Map.t | Keyword.t | List.t | Access.t
+  @spec each(Map.t() | Keyword.t() | List.t() | Access.t(), Function.t(), List.t()) ::
+          Map.t() | Keyword.t() | List.t() | Access.t()
 
   def each(input, fun, opts \\ []) do
     map(input, fun, opts)
@@ -253,10 +258,11 @@ defmodule Iteraptor do
       %{a: %{b: "YAY"}}
   """
 
-  @spec map(Map.t | Keyword.t | List.t | Access.t, Function.t, List.t) :: Map.t | Keyword.t | List.t | Access.t
+  @spec map(Map.t() | Keyword.t() | List.t() | Access.t(), Function.t(), List.t()) ::
+          Map.t() | Keyword.t() | List.t() | Access.t()
 
   def map(input, fun, opts \\ []) do
-    unless is_function(fun, 1), do: raise "Function or arity fun/1 is required"
+    unless is_function(fun, 1), do: raise("Function or arity fun/1 is required")
     {result, _} = traverse(input, fun, opts, {[], nil})
     result
   end
@@ -287,10 +293,11 @@ defmodule Iteraptor do
       ["a", "a_b", "a_b_c"]
   """
 
-  @spec reduce(Map.t | Keyword.t | List.t | Access.t, Access.t, Function.t, List.t) :: Map.t | Keyword.t | List.t | Access.t
+  @spec reduce(Map.t() | Keyword.t() | List.t() | Access.t(), Access.t(), Function.t(), List.t()) ::
+          Map.t() | Keyword.t() | List.t() | Access.t()
 
   def reduce(input, acc \\ %{}, fun, opts \\ []) do
-    unless is_function(fun, 2), do: raise "Function or arity fun/2 is required"
+    unless is_function(fun, 2), do: raise("Function or arity fun/2 is required")
     fun_wrapper = fn kv, acc -> {kv, fun.(kv, acc)} end
     {_, result} = traverse(input, fun_wrapper, opts, {[], acc})
     result
@@ -323,10 +330,15 @@ defmodule Iteraptor do
       {%{a: %{b: %{c: 42}}}, ["a.b.c=", "a.b", "a"]}
   """
 
-  @spec map_reduce(Map.t | Keyword.t | List.t | Access.t, Access.t, Function.t, List.t) :: {Map.t | Keyword.t | List.t | Access.t, any()}
+  @spec map_reduce(
+          Map.t() | Keyword.t() | List.t() | Access.t(),
+          Access.t(),
+          Function.t(),
+          List.t()
+        ) :: {Map.t() | Keyword.t() | List.t() | Access.t(), any()}
 
   def map_reduce(input, acc \\ %{}, fun, opts \\ []) do
-    unless is_function(fun, 2), do: raise "Function or arity fun/2 is required"
+    unless is_function(fun, 2), do: raise("Function or arity fun/2 is required")
     traverse(input, fun, opts, {[], acc})
   end
 
@@ -340,6 +352,7 @@ defmodule Iteraptor do
   end
 
   defp traverse(input, fun, opts, key_acc)
+
   defp traverse(input, fun, opts, {key, acc}) when is_list(input) or is_map(input) do
     {_type, into} = type(input)
 
@@ -347,42 +360,49 @@ defmodule Iteraptor do
       input
       |> Enum.with_index()
       |> Enum.map_reduce(acc, fn {kv, idx}, acc ->
-          {k, v} =
-            case kv do
-              {k, v} -> {k, v}
-              v -> {idx, v}
-            end
-
-          deep = key ++ [k]
-
-          {value, acc} =
-            case {opts[:yield], is_map(v), is_list(v)} do
-              {_, false, false} -> traverse_callback(fun, {{deep, v}, acc})
-              {:all, _, _} -> traverse_callback(fun, {{deep, v}, acc})
-              {:lists, _, true} -> traverse_callback(fun, {{deep, v}, acc})
-              {:maps, true, _} -> traverse_callback(fun, {{deep, v}, acc})
-              _ -> {{deep, v}, acc}
-            end
-          case value do
-            ^v ->
-              {value, acc} = traverse(v, fun, opts, {deep, acc})
-              {{k, value}, acc}
-            {^deep, _} ->
-              {value, acc} = traverse(v, fun, opts, {deep, acc})
-              {{k, value}, acc}
-            {^k, _} ->
-              {value, acc} = traverse(v, fun, opts, {deep, acc})
-              {{k, value}, acc}
-            {k, v} ->
-              {value, acc} = traverse(v, fun, opts, {deep, acc})
-              {{k, value}, acc}
-            v ->
-              {value, acc} = traverse(v, fun, opts, {deep, acc})
-              {{k, value}, acc}
+        {k, v} =
+          case kv do
+            {k, v} -> {k, v}
+            v -> {idx, v}
           end
-        end)
+
+        deep = key ++ [k]
+
+        {value, acc} =
+          case {opts[:yield], is_map(v), is_list(v)} do
+            {_, false, false} -> traverse_callback(fun, {{deep, v}, acc})
+            {:all, _, _} -> traverse_callback(fun, {{deep, v}, acc})
+            {:lists, _, true} -> traverse_callback(fun, {{deep, v}, acc})
+            {:maps, true, _} -> traverse_callback(fun, {{deep, v}, acc})
+            _ -> {{deep, v}, acc}
+          end
+
+        case value do
+          ^v ->
+            {value, acc} = traverse(v, fun, opts, {deep, acc})
+            {{k, value}, acc}
+
+          {^deep, _} ->
+            {value, acc} = traverse(v, fun, opts, {deep, acc})
+            {{k, value}, acc}
+
+          {^k, _} ->
+            {value, acc} = traverse(v, fun, opts, {deep, acc})
+            {{k, value}, acc}
+
+          {k, v} ->
+            {value, acc} = traverse(v, fun, opts, {deep, acc})
+            {{k, value}, acc}
+
+          v ->
+            {value, acc} = traverse(v, fun, opts, {deep, acc})
+            {{k, value}, acc}
+        end
+      end)
+
     {value |> Enum.into(into) |> squeeze(), acc}
   end
+
   defp traverse(input, _fun, _opts, {_key, acc}), do: {input, acc}
 
   # defp process(input, :struct, {acc, key, fun}, opts) do
@@ -411,5 +431,4 @@ defmodule Iteraptor do
   #   end)
   # end
   # defp is_struct(_), do: false
-
 end

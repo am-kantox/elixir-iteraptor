@@ -9,9 +9,9 @@ defmodule Iteraptor.Mixfile do
       app: @app,
       version: @version,
       elixir: "~> 1.4",
-      elixirc_paths: elixirc_paths(Mix.env),
-      build_embedded: Mix.env == :prod,
-      start_permanent: Mix.env == :prod,
+      elixirc_paths: elixirc_paths(Mix.env()),
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
       description: description(),
       package: package(),
       deps: deps(),
@@ -43,13 +43,17 @@ defmodule Iteraptor.Mixfile do
   end
 
   defp package do
-    [# These are the default files included in the package
-     name: @app,
-     files: ["lib", "config", "mix.exs", "README*"],
-     maintainers: ["Aleksei Matiushkin"],
-     licenses: ["MIT"],
-     links: %{"GitHub" => "https://github.com/am-kantox/elixir-iteraptor",
-              "Docs" => "http://hexdocs.pm/iteraptor"}]
+    # These are the default files included in the package
+    [
+      name: @app,
+      files: ["lib", "config", "mix.exs", "README*"],
+      maintainers: ["Aleksei Matiushkin"],
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => "https://github.com/am-kantox/elixir-iteraptor",
+        "Docs" => "http://hexdocs.pm/iteraptor"
+      }
+    ]
   end
 
   defp docs() do
