@@ -3,7 +3,7 @@ defmodule Iteraptor.Mixfile do
 
   @app :iteraptor
   @github "am-kantox/elixir-#{@app}"
-  @version "1.0.3"
+  @version "1.0.4"
 
   def project do
     [
@@ -59,12 +59,12 @@ defmodule Iteraptor.Mixfile do
 
   defp docs() do
     [
-      # main: @app,
+      main: "intro",
       source_ref: "v#{@version}",
       canonical: "http://hexdocs.pm/#{@app}",
-      # logo: "stuff/images/logo.png",
+      logo: "stuff/images/logo.png",
       source_url: "https://github.com/#{@github}",
-      # extras: [ "stuff/pages/intro.md" ],
+      extras: [ "stuff/pages/intro.md" ],
       groups_for_modules: [
         # Iteraptor
 

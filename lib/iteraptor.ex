@@ -1,6 +1,6 @@
 defmodule Iteraptor do
   @moduledoc """
-  `Iteraptor` makes complicated nested structures (currently `map`s, `list`s
+  `Iteraptor` makes complicated nested structures (currently `Map`s, `List`s
     and `Keyword`s) iteration easier.
 
   ## Usage
@@ -24,6 +24,11 @@ defmodule Iteraptor do
   * [`Iteraptor.from_flatmap/3`](https://hexdocs.pm/iteraptor/Iteraptor.html#from_flatmap/3)
     to “unveil”/“unflatten” the previously flattened map into nested structure;
 
+  #### Filtering
+
+  * [`Iteraptor.filter/3`](https://hexdocs.pm/iteraptor/Iteraptor.html#filter/3)
+    to filter the structure according to the value returned from each iteration
+    (`true` to leave the element, `false` to discard.)
   """
 
   import Iteraptor.Utils
