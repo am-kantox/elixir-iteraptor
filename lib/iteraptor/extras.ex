@@ -19,7 +19,7 @@ defmodule Iteraptor.Extras do
       iex> Iteraptor.Extras.bury(42, ~w|a b c d|a, 42)
       ** (Iteraptor.Utils.Unsupported) Unsupported term 42 in call to Iteraptor.Extras.bury/4.
   """
-  @spec bury(Access.t(), List.t(), any(), :default | :map | :keyword | Keyword.t()) :: Access.t()
+  @spec bury(Access.t(), [...], any(), :default | :map | :keyword | Keyword.t()) :: Access.t()
   def bury(term, key, value, opts \\ [into: :default])
 
   def bury(term, key, value, into: :default) do
@@ -56,9 +56,11 @@ defmodule Iteraptor.Extras do
       ["let", "ett", "tte", "ter", "ers"]
   """
 
-  @spec each_cons(List.t() | Map.t() | binary(), integer(), List.t()) :: List.t()
+  @spec each_cons([...] | %{} | binary(), integer(), Keyword.t()) :: [...]
 
   def each_cons(list, n \\ 2, acc \\ [])
+
+  # def each_cons(list, n, acc) when not is_integer(n), do: each_cons(list, 2, acc)
   def each_cons([], _, acc), do: acc
   def each_cons(list, n, acc) when is_list(list) and length(list) < n, do: Enum.reverse(acc)
   def each_cons([_ | tail] = list, n, acc), do: each_cons(tail, n, [Enum.take(list, n) | acc])

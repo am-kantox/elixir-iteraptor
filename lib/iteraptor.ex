@@ -91,7 +91,7 @@ defmodule Iteraptor do
       %{"a_b_c" => 42, "a_b_d_0" => nil, "a_b_d_1" => 42, "a_e_0" => :f, "a_e_1" => 42}
   """
 
-  @spec to_flatmap(Map.t() | List.t() | Keyword.t() | Access.t(), List.t()) :: Map.t()
+  @spec to_flatmap(%{} | [...], Keyword.t()) :: %{}
 
   def to_flatmap(input, opts \\ []) when is_map(input) or is_list(input) do
     reducer = fn {k, v}, acc ->
@@ -156,8 +156,8 @@ defmodule Iteraptor do
       {[0, :b], 42}
       [%{a: 42, b: 42}]
   """
-  @spec from_flatmap(Map.t() | List.t() | Keyword.t() | Access.t(), Function.t(), List.t()) ::
-          Map.t() | List.t() | Keyword.t()
+  @spec from_flatmap(%{}, ({any(), any()} -> any()) | nil, Keyword.t()) ::
+          %{} | [...] | Keyword.t()
 
   def from_flatmap(input, transformer \\ nil, opts \\ []) when is_map(input) do
     reducer = fn {k, v}, acc ->
@@ -215,8 +215,8 @@ defmodule Iteraptor do
       %{a: %{b: %{c: 42}}}
   """
 
-  @spec each(Map.t() | Keyword.t() | List.t() | Access.t(), Function.t(), List.t()) ::
-          Map.t() | Keyword.t() | List.t() | Access.t()
+  @spec each(%{} | Keyword.t() | [...] | Access.t(), ({any(), any()} -> any()), Keyword.t()) ::
+          %{} | Keyword.t() | [...] | Access.t()
 
   def each(input, fun, opts \\ []) do
     map(input, fun, opts)
@@ -256,8 +256,8 @@ defmodule Iteraptor do
       %{a: %{b: "YAY"}}
   """
 
-  @spec map(Map.t() | Keyword.t() | List.t() | Access.t(), Function.t(), List.t()) ::
-          Map.t() | Keyword.t() | List.t() | Access.t()
+  @spec map(%{} | Keyword.t() | [...] | Access.t(), ({any(), any()} -> any()), Keyword.t()) ::
+          %{} | Keyword.t() | [...] | Access.t()
 
   def map(input, fun, opts \\ []) do
     unless is_function(fun, 1), do: raise("Function or arity fun/1 is required")
@@ -291,13 +291,17 @@ defmodule Iteraptor do
       ["a", "a_b", "a_b_c"]
   """
 
-  @spec reduce(Map.t() | Keyword.t() | List.t() | Access.t(), Access.t(), Function.t(), List.t()) ::
-          Map.t() | Keyword.t() | List.t() | Access.t()
+  @spec reduce(
+          %{} | Keyword.t() | [...] | Access.t(),
+          %{} | Keyword.t() | [...] | Access.t(),
+          ({any(), any()}, any() -> any()),
+          Keyword.t()
+        ) :: {%{} | Keyword.t() | [...] | Access.t(), any()}
 
   def reduce(input, acc \\ nil, fun, opts \\ []) do
     unless is_function(fun, 2), do: raise("Function or arity fun/2 is required")
 
-    acc = if is_nil(acc), do: (with {_, into} <- type(input), do: into), else: acc
+    acc = if is_nil(acc), do: with({_, into} <- type(input), do: into), else: acc
     fun_wrapper = fn kv, acc -> {kv, fun.(kv, acc)} end
     {_, result} = traverse(input, fun_wrapper, opts, {[], acc})
     result
@@ -331,11 +335,11 @@ defmodule Iteraptor do
   """
 
   @spec map_reduce(
-          Map.t() | Keyword.t() | List.t() | Access.t(),
-          Access.t(),
-          Function.t(),
-          List.t()
-        ) :: {Map.t() | Keyword.t() | List.t() | Access.t(), any()}
+          %{} | Keyword.t() | [...] | Access.t(),
+          %{} | Keyword.t() | [...] | Access.t(),
+          ({any(), any()}, any() -> any()),
+          Keyword.t()
+        ) :: {%{} | Keyword.t() | [...] | Access.t(), any()}
 
   def map_reduce(input, acc \\ %{}, fun, opts \\ []) do
     unless is_function(fun, 2), do: raise("Function or arity fun/2 is required")
@@ -363,24 +367,25 @@ defmodule Iteraptor do
       %{a: %{e: %{c: 42}, d: %{c: 42}}, c: 42}
   """
 
-  @spec filter(
-          Map.t() | Keyword.t() | List.t() | Access.t(),
-          Function.t(),
-          List.t()
-        ) :: {Map.t() | Keyword.t() | List.t() | Access.t(), any()}
+  @spec filter(%{} | Keyword.t() | [...] | Access.t(), ({any(), any()} -> any()), Keyword.t()) ::
+          {%{} | Keyword.t() | [...] | Access.t(), any()}
 
   def filter(input, fun, opts \\ []) do
     unless is_function(fun, 1), do: raise("Function or arity fun/1 is required")
     acc = with {_, into} <- type(input), do: into
-    fun_wrapper =
-      fn {k, v}, acc ->
-        if fun.({k, v}), do: {{k, v}, deep_put_in(acc, {k, v}, opts)}, else: {{k, v}, acc}
-      end
+
+    fun_wrapper = fn {k, v}, acc ->
+      if fun.({k, v}), do: {{k, v}, deep_put_in(acc, {k, v}, opts)}, else: {{k, v}, acc}
+    end
+
     {_, result} = traverse(input, fun_wrapper, opts, {[], acc})
     result
   end
 
   ##############################################################################
+
+  @spec traverse_callback(({any(), any()} -> any()) | (any(), any() -> any()), {any(), any()}) ::
+          {any(), any()}
 
   defp traverse_callback(fun, {value, acc}) do
     case fun do
@@ -388,6 +393,13 @@ defmodule Iteraptor do
       f when is_function(fun, 2) -> f.(value, acc)
     end
   end
+
+  @spec traverse(
+          %{} | Keyword.t() | [...] | Access.t(),
+          ({any(), any()} -> any()) | (any(), any() -> any()),
+          Keyword.t(),
+          {[any()], any()}
+        ) :: {%{} | Keyword.t() | [...] | Access.t(), any()}
 
   defp traverse(input, fun, opts, key_acc)
 
