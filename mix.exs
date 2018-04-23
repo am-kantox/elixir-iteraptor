@@ -3,13 +3,13 @@ defmodule Iteraptor.Mixfile do
 
   @app :iteraptor
   @github "am-kantox/elixir-#{@app}"
-  @version "1.1.0"
+  @version "1.1.1"
 
   def project do
     [
       app: @app,
       version: @version,
-      elixir: "~> 1.4",
+      elixir: "~> 1.5",
       elixirc_paths: elixirc_paths(Mix.env()),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,

@@ -1,6 +1,5 @@
 language: elixir
 elixir:
-    - 1.4.2
     - 1.5.2
     - 1.6.2
 after_script:
