@@ -22,22 +22,32 @@ defmodule Iteraptor.AST do
       ...>      {var, _, val} when is_atom(val) -> bindings[var]
       ...>      any -> any
       ...>    end)
-      {:>, [context: Elixir, import: Kernel],
+      {:>, [line: 1],
         [
-          {{:., [], [:math, :sin]}, [],
+          {{:., [line: 1], [:math, :sin]}, [line: 1],
             [
-              {:/, [context: Elixir, import: Kernel],
+              {:/, [line: 1],
               [
-                {:*, [context: Elixir, import: Kernel], [42, 1]},
-                {:*, [context: Elixir, import: Kernel], [2, 3.14]}
+                {:*, [line: 1], [42, 1]},
+                {:*, [line: 1], [3.14, 2]}
               ]}
             ]},
           3
         ]}
   """
   @spec map(binary() | {atom(), list(), any()} | list(), ((any(), any()) -> any()), list()) :: any()
-  def map(input, fun, opts \\ []) do
-    reduce(input, [], fn e, acc -> IO.inspect(e) end, yield: :all)
+  def map(input, fun, opts \\ [])
+  def map(input, fun, opts) when is_binary(input) do
+    with {:ok, ast} = Code.string_to_quoted(input), do: map(ast, fun, opts)
+  end
+  def map(input, fun, opts) do
+    with {ast, _} <-
+      Macro.postwalk(input, [], fn
+        {var, meta, ast}, acc when not is_list(ast) and is_atom(var) ->
+          {fun.({var, meta, ast}), acc}
+        e, acc ->
+          if opts[:yield] == :all, do: {fun.(e), acc}, else: {e, acc}
+      end), do: ast
   end
 
   @doc """
