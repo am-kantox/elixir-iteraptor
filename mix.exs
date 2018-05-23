@@ -3,7 +3,7 @@ defmodule Iteraptor.Mixfile do
 
   @app :iteraptor
   @github "am-kantox/elixir-#{@app}"
-  @version "1.1.1"
+  @version "1.2.0"
 
   def project do
     [
@@ -73,6 +73,9 @@ defmodule Iteraptor.Mixfile do
         Extras: [
           Iteraptor.Iteraptable,
           Iteraptor.Extras
+        ],
+        Experimental: [
+          Iteraptor.AST
         ],
         Internals: [
           Iteraptor.Utils
