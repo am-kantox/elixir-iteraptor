@@ -300,6 +300,9 @@ defmodule Iteraptor.Utils do
               List ->
                 {nil, [{k, v} | acc]}
 
+              MapSet ->
+                {nil, MapSet.put(acc, {k, v})}
+
               _ ->
                 get_and_update_in(acc, [k], fn
                   nil ->
