@@ -297,11 +297,11 @@ defmodule Iteraptor.Utils do
         {k, v}, {acc, orphans} ->
           {_, neu} =
             case type do
-              List ->
-                {nil, [{k, v} | acc]}
-
               MapSet ->
                 {nil, MapSet.put(acc, {k, v})}
+
+              List ->
+                {nil, [{k, v} | acc]}
 
               _ ->
                 get_and_update_in(acc, [k], fn

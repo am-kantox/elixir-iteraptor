@@ -122,6 +122,10 @@ def deps, do: [{:iteraptor, "~> 1.0.0-rc1"}]
 
 ### Changelog
 
+#### `1.3.0`
+
+We now support `MapSet`s.
+
 #### `1.0.0-rc1`
 
 Better documentation, `Iteraptor.Extras.bury/3`.
