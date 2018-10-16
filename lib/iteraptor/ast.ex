@@ -1,7 +1,9 @@
 defmodule Iteraptor.AST do
-  @moduledoc """
-  `Iteraptor.AST` module traverses AST, allowing `map`, `reduce` and family.
-  """
+  @moduledoc false
+
+  # """
+  # `Iteraptor.AST` module traverses AST, allowing `map`, `reduce` and family.
+  # """
 
   @doc """
   Mapper for the AST.
