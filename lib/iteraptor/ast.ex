@@ -1,9 +1,7 @@
 defmodule Iteraptor.AST do
-  @moduledoc false
-
-  # """
-  # `Iteraptor.AST` module traverses AST, allowing `map`, `reduce` and family.
-  # """
+  @moduledoc """
+  `Iteraptor.AST` module traverses AST, allowing `map`, `reduce` and family.
+  """
 
   @doc """
   Mapper for the AST.
@@ -37,19 +35,23 @@ defmodule Iteraptor.AST do
           3
         ]}
   """
-  @spec map(binary() | {atom(), list(), any()} | list(), ((any(), any()) -> any()), list()) :: any()
+  @spec map(binary() | {atom(), list(), any()} | list(), (any(), any() -> any()), list()) :: any()
   def map(input, fun, opts \\ [])
+
   def map(input, fun, opts) when is_binary(input) do
     with {:ok, ast} = Code.string_to_quoted(input), do: map(ast, fun, opts)
   end
+
   def map(input, fun, opts) do
     with {ast, _} <-
-      Macro.postwalk(input, [], fn
-        {var, meta, ast}, acc when not is_list(ast) and is_atom(var) ->
-          {fun.({var, meta, ast}), acc}
-        e, acc ->
-          if opts[:yield] == :all, do: {fun.(e), acc}, else: {e, acc}
-      end), do: ast
+           Macro.postwalk(input, [], fn
+             {var, meta, ast}, acc when not is_list(ast) and is_atom(var) ->
+               {fun.({var, meta, ast}), acc}
+
+             e, acc ->
+               if opts[:yield] == :all, do: {fun.(e), acc}, else: {e, acc}
+           end),
+         do: ast
   end
 
   @doc """
@@ -74,7 +76,12 @@ defmodule Iteraptor.AST do
       ...> |> Enum.reverse()
       ~w|a b c|a
   """
-  @spec reduce(binary() | {atom(), list(), any()} | list(), any(), ((any(), any()) -> any()), list()) :: any()
+  @spec reduce(
+          binary() | {atom(), list(), any()} | list(),
+          any(),
+          (any(), any() -> any()),
+          list()
+        ) :: any()
   def reduce(input, acc, fun, opts \\ []), do: do_traverse(input, acc, fun, opts)
 
   ##############################################################################
@@ -85,30 +92,38 @@ defmodule Iteraptor.AST do
   end
 
   defp do_traverse({var, meta, val}, acc, fun, _opts)
-    when is_atom(var) and is_atom(val), do: fun.({var, meta, val}, acc)
+       when is_atom(var) and is_atom(val),
+       do: fun.({var, meta, val}, acc)
 
   defp do_traverse({operator, meta, ast}, acc, fun, opts) do
     acc =
-      Iteraptor.reduce(ast, acc, fn
-        {_, {term, meta, ast}}, acc when is_list(ast) ->
-          acc = do_traverse(ast, acc, fun, opts)
-          if opts[:yield] == :all, do: fun.({term, meta, ast}, acc), else: acc
-        {_, {var, meta, ast}}, acc when is_atom(var) ->
-          fun.({var, meta, ast}, acc)
-        _, acc ->
-          acc
-      end, opts)
-   if opts[:yield] == :all || is_atom(ast),
-     do: fun.({operator, meta, ast}, acc), else: acc
+      Iteraptor.reduce(
+        ast,
+        acc,
+        fn
+          {_, {term, meta, ast}}, acc when is_list(ast) ->
+            acc = do_traverse(ast, acc, fun, opts)
+            if opts[:yield] == :all, do: fun.({term, meta, ast}, acc), else: acc
+
+          {_, {var, meta, ast}}, acc when is_atom(var) ->
+            fun.({var, meta, ast}, acc)
+
+          _, acc ->
+            acc
+        end,
+        opts
+      )
+
+    if opts[:yield] == :all || is_atom(ast), do: fun.({operator, meta, ast}, acc), else: acc
   end
 
   defp do_traverse(ast, acc, fun, opts) when is_list(ast) do
-#    fun =
-#      if opts[:yield] == :all do
-#        &do_traverse(&1, fun.(&1, &2), fun, opts)
-#      else
-#        &do_traverse(&1, &2, fun, opts)
-#      end
+    #    fun =
+    #      if opts[:yield] == :all do
+    #        &do_traverse(&1, fun.(&1, &2), fun, opts)
+    #      else
+    #        &do_traverse(&1, &2, fun, opts)
+    #      end
 
     Enum.reduce(ast, acc, &do_traverse(&1, &2, fun, opts))
   end
@@ -116,5 +131,4 @@ defmodule Iteraptor.AST do
   defp do_traverse(term, acc, fun, opts) do
     if opts[:yield] == :all, do: fun.(term, acc), else: acc
   end
-
 end
