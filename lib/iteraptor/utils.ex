@@ -362,4 +362,7 @@ defmodule Iteraptor.Utils do
   end
 
   def squeeze(input), do: input
+
+  @doc false
+  def struct_checker(env, _bytecode), do: env.module.__struct__
 end

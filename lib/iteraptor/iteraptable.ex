@@ -9,11 +9,32 @@ defmodule Iteraptor.Iteraptable do
 
   Use the module within the struct of your choice and this struct will be
   automagically granted `Enumerable` and `Collectable` protocols implementations.
+
+  `use Iteraptor.Iteraptable` accepts keyword parameter `skip: Access` or
+  `skip: [Enumerable, Collectable]` which allows to implement a subset of
+  protocols. Also it accepts keyword parameter `derive: MyProtocol` allowing
+  to specify what protocol(s) implementations should be implicitly derived
+  for this struct.
   """
 
-  @codepieces [
-    enumerable:
-      quote do
+  defmodule Error do
+    @moduledoc """
+    Error in applying `Iteraptor.Iteraptable`
+    """
+    defexception [:reason, :message]
+
+    @doc false
+    def exception(reason: reason) do
+      message =
+        "the given function must return a two-element tuple or :pop, got: #{inspect(reason)}"
+
+      %Iteraptor.Iteraptable.Error{message: message, reason: reason}
+    end
+  end
+
+  @codepieces %{
+    Enumerable =>
+      quote location: :keep do
         defimpl Enumerable, for: __MODULE__ do
           def slice(enumerable) do
             {:error, __MODULE__}
@@ -49,8 +70,8 @@ defmodule Iteraptor.Iteraptable do
           defp do_reduce([h | t], {:cont, acc}, fun), do: do_reduce(t, fun.(h, acc), fun)
         end
       end,
-    collectable:
-      quote do
+    Collectable =>
+      quote location: :keep do
         defimpl Collectable, for: __MODULE__ do
           def into(original) do
             {original,
@@ -62,59 +83,89 @@ defmodule Iteraptor.Iteraptable do
           end
         end
       end,
-    access:
-      quote do
+    Access =>
+      quote location: :keep do
         @behaviour Access
 
-        def fetch(term, key) do
-          try do
-            {:ok, term.key}
-          rescue
-            e in KeyError -> :error
-          end
-        end
+        @impl Access
+        def fetch(term, key), do: Map.fetch(term, key)
 
-        def get(term, key, default \\ nil) do
-          case fetch(term, key) do
-            {:ok, value} -> value
-            :error -> default
-          end
-        end
+        @impl Access
+        def pop(term, key, default \\ nil),
+          do: {get(term, key, default), delete(term, key)}
 
-        def get_and_update(term, key, fun) do
+        @impl Access
+        def get_and_update(term, key, fun) when is_function(fun, 1) do
           current = get(term, key)
 
           case fun.(current) do
-            {get, update} ->
-              {get, %{term | key => update}}
-
-            :pop ->
-              {current, %{term | key => nil}}
-
-            other ->
-              raise "the given function must return a two-element tuple or :pop, got: #{
-                      inspect(other)
-                    }"
+            {get, update} -> {get, put(term, key, update)}
+            :pop -> {current, delete(term, key)}
+            other -> raise Error, reason: other
           end
         end
 
-        def pop(term, key) do
-          get_and_update(term, key, fn _ -> :pop end)
+        if Version.compare(System.version(), "1.7.0") == :lt, do: @impl(Access)
+
+        def get(term, key, default \\ nil) do
+          case term do
+            %{^key => value} -> value
+            _ -> default
+          end
         end
+
+        def put(term, key, val), do: %{term | key => val}
+
+        def delete(term, key), do: put(term, key, nil)
+
+        defoverridable get: 3, put: 3, delete: 2
       end
-  ]
+  }
 
   @doc """
   Allows to enable iterating features on structs with `use Iteraptor.Iteraptable`
 
   ## Parameters
 
-  - `opts`: `Keyword` that currently might consist of `skip: collectable`
-  to make `Iteraptor` to implement `Enumerable` protocol _only_
+  - keyword parameter `opts`
+    - `skip: Access` or `skip: [Enumerable, Collectable]` allows
+    to implement a subset of protocols;
+    - `derive: MyProtocol` allows to derive selected protocol implementation(s).
   """
   defmacro __using__(opts \\ []) do
-    Enum.reduce(~w|enumerable collectable access|a, [], fn type, acc ->
-      if opts[:skip] == type, do: acc, else: [@codepieces[type] | acc]
+    checker = quote(location: :keep, do: @after_compile({Iteraptor.Utils, :struct_checker}))
+
+    derive =
+      opts[:derive]
+      |> Macro.expand(__ENV__)
+      |> case do
+        nil -> []
+        value when is_list(value) -> value
+        value -> [value]
+      end
+      |> case do
+        [] -> []
+        protos -> [quote(location: :keep, do: @derive(unquote(protos)))]
+      end
+
+    excluded =
+      opts[:skip]
+      |> Macro.expand(__ENV__)
+      |> case do
+        nil -> []
+        :all -> [Enumerable, Collectable, Access]
+        value when is_list(value) -> value
+        value -> [value]
+      end
+      |> Enum.map(fn value ->
+        case value |> to_string() |> String.capitalize() do
+          <<"Elixir.", _::binary>> -> value
+          _ -> Module.concat([value])
+        end
+      end)
+
+    Enum.reduce([Enumerable, Collectable, Access], [checker | derive], fn type, acc ->
+      if Enum.find(excluded, &(&1 == type)), do: acc, else: [@codepieces[type] | acc]
     end)
   end
 end
