@@ -26,7 +26,7 @@ defmodule Iteraptor.Iteraptable.Test do
 
   test "prevents inclusion into non-structs" do
     assert_raise UndefinedFunctionError,
-                 "function Bad.__struct__/0 is undefined (function not available)",
+                 ~r|function Bad.__struct__/0 is undefined|,
                  fn ->
                    Module.create(
                      Bad,
