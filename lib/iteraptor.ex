@@ -101,7 +101,6 @@ defmodule Iteraptor do
           _ -> Enum.join(k, delimiter(opts))
         end
 
-      # FIXME maybe keyword would be better?
       Map.put(acc, key, v)
     end
 

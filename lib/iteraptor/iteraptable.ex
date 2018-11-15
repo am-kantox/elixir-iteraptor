@@ -17,9 +17,9 @@ defmodule Iteraptor.Iteraptable do
   for this struct.
   """
 
-  defmodule Error do
+  defmodule Unsupported do
     @moduledoc """
-    Error in applying `Iteraptor.Iteraptable`
+    Unsupported in applying `Iteraptor.Iteraptable`
     """
     defexception [:reason, :message]
 
@@ -28,7 +28,7 @@ defmodule Iteraptor.Iteraptable do
       message =
         "the given function must return a two-element tuple or :pop, got: #{inspect(reason)}"
 
-      %Iteraptor.Iteraptable.Error{message: message, reason: reason}
+      %Iteraptor.Iteraptable.Unsupported{message: message, reason: reason}
     end
   end
 
@@ -101,7 +101,7 @@ defmodule Iteraptor.Iteraptable do
           case fun.(current) do
             {get, update} -> {get, put(term, key, update)}
             :pop -> {current, delete(term, key)}
-            other -> raise Error, reason: other
+            other -> raise Unsupported, reason: other
           end
         end
 

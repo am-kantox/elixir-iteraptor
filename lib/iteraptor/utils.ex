@@ -43,7 +43,6 @@ defmodule Iteraptor.Utils do
         {Map, %{}}
 
       _ ->
-        # FIXME struct instantiation is potentially dangerous
         if is_map(input),
           do: {input.__struct__, struct(input.__struct__)},
           else: {:invalid, nil}
@@ -316,18 +315,10 @@ defmodule Iteraptor.Utils do
 
                   list when is_list(list) ->
                     case v do
-                      [] ->
-                        {list, list}
-
-                      [_ | _] ->
-                        {list, list ++ v}
-
-                      # FIXME opts? needed?
-                      %{} ->
-                        {list, list ++ Map.to_list(v)}
-
-                      _ ->
-                        {list, list ++ [v]}
+                      [] -> {list, list}
+                      [_ | _] -> {list, list ++ v}
+                      %{} -> {list, list ++ Map.to_list(v)}
+                      _ -> {list, list ++ [v]}
                     end
 
                   other ->
@@ -339,25 +330,18 @@ defmodule Iteraptor.Utils do
 
         v, {acc, orphans} ->
           case type do
-            # FIXME raise? this cannot happen
-            Keyword ->
-              {[v | acc], orphans}
-
-            List ->
-              {[v | acc], orphans}
-
-            Map ->
-              {Map.put(acc, orphans, v), orphans + 1}
+            Keyword -> {[v | acc], orphans}
+            List -> {[v | acc], orphans}
+            Map -> {Map.put(acc, orphans, v), orphans + 1}
           end
       end)
 
     result
-    |> Enum.map(fn
+    |> Enum.into(into, fn
       {k, v} when is_list(v) -> {k, v |> squeeze() |> :lists.reverse()}
       {k, v} -> {k, squeeze(v)}
       v -> v
     end)
-    |> Enum.into(into)
     |> try_to_list()
   end
 
