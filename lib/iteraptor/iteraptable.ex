@@ -153,7 +153,7 @@ defmodule Iteraptor.Iteraptable do
       |> Macro.expand(__ENV__)
       |> case do
         nil -> []
-        :all -> [Enumerable, Collectable, Access]
+        :all -> Map.keys(@codepieces)
         value when is_list(value) -> value
         value -> [value]
       end
@@ -164,8 +164,8 @@ defmodule Iteraptor.Iteraptable do
         end
       end)
 
-    Enum.reduce([Enumerable, Collectable, Access], [checker | derive], fn type, acc ->
-      if Enum.find(excluded, &(&1 == type)), do: acc, else: [@codepieces[type] | acc]
+    Enum.reduce(@codepieces, [checker | derive], fn {type, ast}, acc ->
+      if Enum.find(excluded, &(&1 == type)), do: acc, else: [ast | acc]
     end)
   end
 end
