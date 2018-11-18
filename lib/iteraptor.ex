@@ -198,8 +198,10 @@ defmodule Iteraptor do
     is an array or deeply nested keys;
   e.g. on `%{a: {b: 42}}` will be called once, with tuple `{[:a, :b], 42}`;
   - `opts`: the options to be passed to the iteration
-    - `yield`: `[:all | :maps | :keywords |` what to yield; _default:_ `nil`
-    for yielding _values only_.
+    - `yield`: `[:all | :maps | :keywords | nil]` what to yield; _default:_ `nil`
+    for yielding _values only_
+    - `structs`: `[:values | nil]` when `:values`, the nested structs are considered
+    leaves and returned to the iterator instead of being iterated through
 
   ## Examples
 
@@ -412,9 +414,9 @@ defmodule Iteraptor do
   defp traverse(input, fun, opts, {key, acc}) when is_list(input) or is_map(input) do
     {type, from, into} = type(input)
 
-    snm = opts[:structs_as_values] == true
+    s_as_v = opts[:structs] == :values
 
-    if is_map(from) and type != Map and snm do
+    if is_map(from) and type != Map and s_as_v do
       {input, acc}
     else
       {value, acc} =
@@ -430,7 +432,7 @@ defmodule Iteraptor do
           deep = key ++ [k]
 
           {value, acc} =
-            case {opts[:yield], is_map(v) and not(snm), is_list(v)} do
+            case {opts[:yield], is_map(v) and not(s_as_v), is_list(v)} do
               {_, false, false} -> traverse_callback(fun, {{deep, v}, acc})
               {:all, _, _} -> traverse_callback(fun, {{deep, v}, acc})
               {:lists, _, true} -> traverse_callback(fun, {{deep, v}, acc})

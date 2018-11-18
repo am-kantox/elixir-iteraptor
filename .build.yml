@@ -1,0 +1,17 @@
+image: archlinux
+packages:
+  - cmake
+  - wlc-git
+  - erlang
+  - elixir
+sources:
+  - https://git.sr.ht/~mudasobwa/elixir-iteraptor
+tasks:
+  - setup: |
+      cd elixir-iteraptor
+      mix local.hex --force
+      mix local.rebar --force
+      mix deps.get
+  - build: |
+      cd elixir-iteraptor
+      mix test

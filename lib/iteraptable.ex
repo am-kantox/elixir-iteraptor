@@ -1,6 +1,10 @@
 defprotocol Iteraptable do
+  @since "1.5.0"
   @moduledoc """
   The protocol specifying how the respective struct might be used within `Iteraptor`.
+
+  **Experimental.** By implementing this protocol one might change the behaviour of
+  nested objects regarding how they should be iterated through.
   """
 
   @spec type(term :: any()) :: atom()
@@ -12,7 +16,7 @@ defprotocol Iteraptable do
   def to_enumerable(term)
 
   @spec to_collectable(term :: any()) :: Collectable.t
-  @doc "Converts a term to an collectable"
+  @doc "Converts a term to a collectable"
   def to_collectable(term)
 
   # @spec name(term :: any()) :: binary()

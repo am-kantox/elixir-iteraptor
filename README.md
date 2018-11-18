@@ -122,6 +122,12 @@ def deps, do: [{:iteraptor, "~> 1.0.0-rc1"}]
 
 ### Changelog
 
+#### `1.5.0`
+
+All iterators do now accept `structs: :values` keyword argument to prevent nested iteration into structs.
+
+Experimental support for `Iteraptable` protocol.
+
 #### `1.4.0`
 
 Extended support for `Iteraptor.Iteraptable`:
