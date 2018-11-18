@@ -29,7 +29,8 @@ defimpl Iteraptable, for: Date do
   if Version.compare(System.version(), "1.8.0") == :lt  do
     def to_enumerable(term), do: %{struct_date: Date.to_iso8601(term)}
   else
-    def to_enumerable(term), do: %{s·date: Date.to_iso8601(term)}
+    def to_enumerable(term), do: %{struct_date: Date.to_iso8601(term)}
+    # def to_enumerable(term), do: %{s·date: Date.to_iso8601(term)}
   end
   def to_collectable(_term), do: %{}
 end
@@ -39,7 +40,8 @@ defimpl Iteraptable, for: Time do
   if Version.compare(System.version(), "1.8.0") == :lt  do
     def to_enumerable(term), do: %{struct_time: Time.to_iso8601(term)}
   else
-    def to_enumerable(term), do: %{s·time: Time.to_iso8601(term)}
+    def to_enumerable(term), do: %{struct_time: Time.to_iso8601(term)}
+    # def to_enumerable(term), do: %{s·time: Time.to_iso8601(term)}
   end
   def to_collectable(_term), do: %{}
 end
