@@ -122,6 +122,14 @@ defmodule Iteraptor.Iteraptable do
       end
   }
 
+  @iteraptable (quote location: :keep do
+    defimpl Iteraptable, for: __MODULE__ do
+      def type(_), do: __MODULE__
+      def to_enumerable(term), do: term
+      def to_collectable(term), do: term
+    end
+  end)
+
   @doc """
   Allows to enable iterating features on structs with `use Iteraptor.Iteraptable`
 
@@ -148,11 +156,14 @@ defmodule Iteraptor.Iteraptable do
         protos -> [quote(location: :keep, do: @derive(unquote(protos)))]
       end
 
-    excluded =
-      opts[:skip]
+    skip =
+      opts
+      |> Keyword.get(:skip, [])
       |> Macro.expand(__ENV__)
+
+    excluded =
+      skip
       |> case do
-        nil -> []
         :all -> Map.keys(@codepieces)
         value when is_list(value) -> value
         value -> [value]
@@ -164,7 +175,15 @@ defmodule Iteraptor.Iteraptable do
         end
       end)
 
-    Enum.reduce(@codepieces, [checker | derive], fn {type, ast}, acc ->
+    init =
+      case [Enumerable, Collectable] -- excluded do
+        # TODO make it better: construct the implementation,
+        #      based on what is presented; others should raise
+        [Enumerable, Collectable] -> [checker, @iteraptable | derive]
+        _ -> [checker | derive]
+      end
+
+    Enum.reduce(@codepieces, init, fn {type, ast}, acc ->
       if Enum.find(excluded, &(&1 == type)), do: acc, else: [ast | acc]
     end)
   end

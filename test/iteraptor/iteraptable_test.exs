@@ -4,6 +4,16 @@ defmodule Iteraptor.Iteraptable.Test do
   import ExUnit.CaptureLog
   doctest Iteraptor.Iteraptable
 
+  test "iterapted struct is flattened" do
+    assert capture_log(fn ->
+             %{m: %{field: 42}, s: %Iteraptor.Struct{field: 42}, dt: [~D[2018-11-18], ~T[13:00:07]]}
+             |> Iteraptor.to_flatmap()
+             |> inspect()
+             |> Logger.debug()
+           end) =~ ~r|"dt.0.struct_date" => "2018-11-18", "dt.1.struct_time" => "13:00:07"|
+           # end) =~ ~r|"dt.0.s·date" => "2018-11-18", "dt.1.s·time" => "13:00:07"|
+        end
+
   test "iterapted struct is enumerated" do
     assert capture_log(fn ->
              %Iteraptor.Struct{field: 42}

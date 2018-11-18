@@ -23,13 +23,11 @@ defmodule Iteraptor.Extras do
   def bury(term, key, value, opts \\ [into: :default])
 
   def bury(term, key, value, into: :default) do
-    {type, into} = Iteraptor.Utils.type(term)
-
-    case type do
-      :invalid ->
+    case Iteraptor.Utils.type(term) do
+      :error ->
         raise Iteraptor.Utils.Unsupported, term: term, function: "Iteraptor.Extras.bury/4"
 
-      _ ->
+      {_, _, into} ->
         bury(term, key, value, into: into)
     end
   end
