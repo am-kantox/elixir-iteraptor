@@ -300,7 +300,7 @@ defmodule Iteraptor do
   def reduce(input, acc \\ nil, fun, opts \\ []) do
     unless is_function(fun, 2), do: raise("Function or arity fun/2 is required")
 
-    acc = if is_nil(acc), do: with({_, into} <- type(input), do: into), else: acc
+    acc = if is_nil(acc), do: with({_, _, into} <- type(input), do: into), else: acc
     fun_wrapper = fn kv, acc -> {kv, fun.(kv, acc)} end
     {_, result} = traverse(input, fun_wrapper, opts, {[], acc})
     result
@@ -371,7 +371,7 @@ defmodule Iteraptor do
 
   def filter(input, fun, opts \\ []) do
     unless is_function(fun, 1), do: raise("Function or arity fun/1 is required")
-    acc = with {_, into} <- type(input), do: into
+    acc = with {_, _, into} <- type(input), do: into
 
     fun_wrapper = fn {k, v}, acc ->
       if fun.({k, v}), do: {{k, v}, deep_put_in(acc, {k, v}, opts)}, else: {{k, v}, acc}
@@ -403,7 +403,7 @@ defmodule Iteraptor do
   defp traverse(input, fun, opts, key_acc)
 
   defp traverse(input, fun, opts, {key, acc}) when is_list(input) or is_map(input) do
-    {_type, into} = type(input)
+    {_type, input, into} = type(input)
 
     {value, acc} =
       input

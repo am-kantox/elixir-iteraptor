@@ -23,29 +23,32 @@ defmodule Iteraptor.Utils do
   ## Examples:
 
       iex> Iteraptor.Utils.type(%{foo: :bar})
-      {Map, %{}}
+      {Map, %{foo: :bar}, %{}}
       iex> Iteraptor.Utils.type([foo: :bar])
-      {Keyword, []}
+      {Keyword, [foo: :bar], []}
       iex> Iteraptor.Utils.type([{:foo, :bar}])
-      {Keyword, []}
+      {Keyword, [{:foo, :bar}], []}
       iex> Iteraptor.Utils.type(~w|foo bar|a)
-      {List, []}
+      {List, [:foo, :bar], []}
       iex> Iteraptor.Utils.type(42)
-      {:invalid, nil}
+      :error
   """
-  @spec type(%{} | Keyword.t() | [...] | any()) :: {atom(), %{} | [] | nil}
+  @spec type(%{} | Keyword.t() | [...] | any()) :: {atom(), any(), any()} | :error
   def type(input) do
-    case Enumerable.impl_for(input) do
-      Enumerable.List ->
-        {if(Keyword.keyword?(input), do: Keyword, else: List), []}
+    case {Enumerable.impl_for(input), Iteraptable.impl_for(input)} do
+      {Enumerable.List, _} ->
+        {if(Keyword.keyword?(input), do: Keyword, else: List), input, []}
 
-      Enumerable.Map ->
-        {Map, %{}}
+      {Enumerable.Map, _} ->
+        {Map, input, %{}}
 
-      _ ->
+      {_, i} when not is_nil(i) ->
+        {i.type(input), i.to_enumerable(input), i.to_collectable(input)}
+
+      {_, _} ->
         if is_map(input),
-          do: {input.__struct__, struct(input.__struct__)},
-          else: {:invalid, nil}
+          do: {input.__struct__, Map.from_struct(input), %{}},
+          else: :error
     end
   end
 
@@ -223,7 +226,7 @@ defmodule Iteraptor.Utils do
   def quacks_as_list(input) when is_list(input) or is_map(input) do
     input
     |> Enum.map(fn
-      {k, _} ->
+      {k, _} when is_atom(k) or is_binary(k) or is_number(k) ->
         case k |> to_string() |> Integer.parse() do
           {value, ""} -> value
           _ -> nil
@@ -289,7 +292,7 @@ defmodule Iteraptor.Utils do
   """
   @spec squeeze(%{} | Keyword.t() | [...] | Access.t()) :: %{} | Keyword.t() | [...]
   def squeeze(input) when is_map(input) or is_list(input) do
-    {type, into} = type(input)
+    {type, input, into} = type(input)
 
     {result, _} =
       Enum.reduce(input, {into, 0}, fn
