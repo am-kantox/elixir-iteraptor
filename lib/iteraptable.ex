@@ -19,12 +19,13 @@ defprotocol Iteraptable do
   @doc "Converts a term to a collectable"
   def to_collectable(term)
 
-  # @spec name(term :: any()) :: binary()
-  # @doc "Returns a name of the term to be represented in flatmaps"
-  # def name(term)
+  @spec name(term :: any()) :: binary()
+  @doc "Returns a name of the term to be represented in flatmaps"
+  def name(term)
 end
 
 defimpl Iteraptable, for: Date do
+  def name(_term), do: "s·date"
   def type(_term), do: Date
   if Version.compare(System.version(), "1.8.0") == :lt  do
     def to_enumerable(term), do: %{struct_date: Date.to_iso8601(term)}
@@ -36,6 +37,7 @@ defimpl Iteraptable, for: Date do
 end
 
 defimpl Iteraptable, for: Time do
+  def name(_term), do: "s·time"
   def type(_term), do: Time
   if Version.compare(System.version(), "1.8.0") == :lt  do
     def to_enumerable(term), do: %{struct_time: Time.to_iso8601(term)}
