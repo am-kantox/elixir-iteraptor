@@ -82,4 +82,29 @@ defmodule Iteraptor.Test do
       assert(input == Iteraptor.each(input, fn _ -> :ok end, full_parent: full_parent))
     end)
   end
+
+  test "handles nested structs properly" do
+    result =
+      capture_log(fn ->
+        Iteraptor.each(
+          %{ok: 42, nested: %Iteraptor.BareStruct{}}, &Logger.debug(inspect(&1))
+        )
+      end)
+      assert result =~ "{[:nested, :bar], :baz}"
+      assert result =~ "{[:nested, :foo], 42}"
+      assert result =~ "{[:ok], 42}"
+  end
+
+  test "handles nested structs properly with structs_as_values: true" do
+    result =
+      capture_log(fn ->
+        Iteraptor.each(
+          %{ok: 42, nested: %Iteraptor.BareStruct{}},
+          &Logger.debug(inspect(&1)),
+          structs_as_values: true
+        )
+      end)
+      assert result =~ "{[:nested], %Iteraptor.BareStruct{bar: :baz, foo: 42}}"
+      assert result =~ "{[:ok], 42}"
+  end
 end

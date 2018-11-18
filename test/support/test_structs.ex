@@ -63,3 +63,5 @@ defmodule Iteraptor.DerivedStruct do
   def fields, do: @fields
   defstruct @fields
 end
+
+defmodule Iteraptor.BareStruct, do: defstruct foo: 42, bar: :baz

@@ -393,6 +393,13 @@ defmodule Iteraptor do
     end
   end
 
+  defmacrop traverse_value({k, v}, fun, opts, {deep, acc}) do
+    quote do
+      {value, acc} = traverse(unquote(v), unquote(fun), unquote(opts), unquote({deep, acc}))
+      {{unquote(k), value}, acc}
+    end
+  end
+
   @spec traverse(
           %{} | Keyword.t() | [...] | Access.t(),
           ({any(), any()} -> any()) | (any(), any() -> any()),
@@ -403,53 +410,45 @@ defmodule Iteraptor do
   defp traverse(input, fun, opts, key_acc)
 
   defp traverse(input, fun, opts, {key, acc}) when is_list(input) or is_map(input) do
-    {_type, input, into} = type(input)
+    {type, from, into} = type(input)
 
-    {value, acc} =
-      input
-      |> Enum.with_index()
-      |> Enum.map_reduce(acc, fn {kv, idx}, acc ->
-        {k, v} =
-          case kv do
-            {k, v} -> {k, v}
-            v -> {idx, v}
+    snm = opts[:structs_as_values] == true
+
+    if is_map(from) and type != Map and snm do
+      {input, acc}
+    else
+      {value, acc} =
+        from
+        |> Enum.with_index()
+        |> Enum.map_reduce(acc, fn {kv, idx}, acc ->
+          {k, v} =
+            case kv do
+              {k, v} -> {k, v}
+              v -> {idx, v}
+            end
+
+          deep = key ++ [k]
+
+          {value, acc} =
+            case {opts[:yield], is_map(v) and not(snm), is_list(v)} do
+              {_, false, false} -> traverse_callback(fun, {{deep, v}, acc})
+              {:all, _, _} -> traverse_callback(fun, {{deep, v}, acc})
+              {:lists, _, true} -> traverse_callback(fun, {{deep, v}, acc})
+              {:maps, true, _} -> traverse_callback(fun, {{deep, v}, acc})
+              _ -> {{deep, v}, acc}
+            end
+
+          case value do
+            ^v -> traverse_value({k, v}, fun, opts, {deep, acc})
+            {^deep, v} -> traverse_value({k, v}, fun, opts, {deep, acc})
+            {^k, v} -> traverse_value({k, v}, fun, opts, {deep, acc})
+            {k, v} -> traverse_value({k, v}, fun, opts, {deep, acc})
+            v -> traverse_value({k, v}, fun, opts, {deep, acc})
           end
+        end)
 
-        deep = key ++ [k]
-
-        {value, acc} =
-          case {opts[:yield], is_map(v), is_list(v)} do
-            {_, false, false} -> traverse_callback(fun, {{deep, v}, acc})
-            {:all, _, _} -> traverse_callback(fun, {{deep, v}, acc})
-            {:lists, _, true} -> traverse_callback(fun, {{deep, v}, acc})
-            {:maps, true, _} -> traverse_callback(fun, {{deep, v}, acc})
-            _ -> {{deep, v}, acc}
-          end
-
-        case value do
-          ^v ->
-            {value, acc} = traverse(v, fun, opts, {deep, acc})
-            {{k, value}, acc}
-
-          {^deep, v} ->
-            {value, acc} = traverse(v, fun, opts, {deep, acc})
-            {{k, value}, acc}
-
-          {^k, v} ->
-            {value, acc} = traverse(v, fun, opts, {deep, acc})
-            {{k, value}, acc}
-
-          {k, v} ->
-            {value, acc} = traverse(v, fun, opts, {deep, acc})
-            {{k, value}, acc}
-
-          v ->
-            {value, acc} = traverse(v, fun, opts, {deep, acc})
-            {{k, value}, acc}
-        end
-      end)
-
-    {value |> Enum.into(into) |> squeeze(), acc}
+      {value |> Enum.into(into) |> squeeze(), acc}
+    end
   end
 
   defp traverse(input, _fun, _opts, {_key, acc}), do: {input, acc}
