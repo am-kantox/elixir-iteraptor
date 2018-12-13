@@ -122,14 +122,6 @@ defmodule Iteraptor.Iteraptable do
       end
   }
 
-  @iteraptable (quote location: :keep do
-    defimpl Iteraptable, for: __MODULE__ do
-      def type(_), do: __MODULE__
-      def to_enumerable(term), do: term
-      def to_collectable(term), do: term
-    end
-  end)
-
   @doc """
   Allows to enable iterating features on structs with `use Iteraptor.Iteraptable`
 
@@ -175,15 +167,7 @@ defmodule Iteraptor.Iteraptable do
         end
       end)
 
-    init =
-      case [Enumerable, Collectable] -- excluded do
-        # TODO make it better: construct the implementation,
-        #      based on what is presented; others should raise
-        [Enumerable, Collectable] -> [checker, @iteraptable | derive]
-        _ -> [checker | derive]
-      end
-
-    Enum.reduce(@codepieces, init, fn {type, ast}, acc ->
+    Enum.reduce(@codepieces, [checker, derive], fn {type, ast}, acc ->
       if Enum.find(excluded, &(&1 == type)), do: acc, else: [ast | acc]
     end)
   end

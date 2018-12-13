@@ -161,16 +161,26 @@ defmodule Iteraptor do
   def from_flatmap(input, transformer \\ nil, opts \\ []) when is_map(input) do
     reducer = fn {k, v}, acc ->
       key =
-        case k |> Enum.join(delimiter(opts)) |> String.split(delimiter(opts)) do
-          [k] -> [smart_convert(k)]
-          list -> Enum.map(list, &smart_convert/1)
+        k
+        |> Enum.join(delimiter(opts))
+        |> String.split(delimiter(opts))
+        |> Enum.map(&smart_key/1)
+
+      [tail | rest] = :lists.reverse(key)
+
+      {tail, value} =
+        case tail do
+          {:__structure__, key} -> smart_value(key, v)
+          _ -> {tail, v}
         end
+
+      key = :lists.reverse([tail | rest])
 
       value =
         if is_nil(transformer) do
-          v
+          value
         else
-          case transformer.({key, v}) do
+          case transformer.({key, value}) do
             {^key, any} -> any
             any -> any
           end
@@ -302,7 +312,11 @@ defmodule Iteraptor do
   def reduce(input, acc \\ nil, fun, opts \\ []) do
     unless is_function(fun, 2), do: raise("Function or arity fun/2 is required")
 
-    acc = if is_nil(acc), do: with({_, _, into} <- type(input), do: into), else: acc
+    acc =
+      if is_nil(acc),
+        do: with({type, _, into} <- type(input), do: struct(type, into)),
+        else: acc
+
     fun_wrapper = fn kv, acc -> {kv, fun.(kv, acc)} end
     {_, result} = traverse(input, fun_wrapper, opts, {[], acc})
     result
@@ -373,7 +387,7 @@ defmodule Iteraptor do
 
   def filter(input, fun, opts \\ []) do
     unless is_function(fun, 1), do: raise("Function or arity fun/1 is required")
-    acc = with {_, _, into} <- type(input), do: into
+    acc = with {type, _, into} <- type(input), do: struct(type, into)
 
     fun_wrapper = fn {k, v}, acc ->
       if fun.({k, v}), do: {{k, v}, deep_put_in(acc, {k, v}, opts)}, else: {{k, v}, acc}
@@ -412,7 +426,7 @@ defmodule Iteraptor do
   defp traverse(input, fun, opts, key_acc)
 
   defp traverse(input, fun, opts, {key, acc}) when is_list(input) or is_map(input) do
-    {type, from, into} = type(input)
+    {type, from, into} = type(input, true)
 
     s_as_v = opts[:structs] == :values
 
@@ -432,7 +446,7 @@ defmodule Iteraptor do
           deep = key ++ [k]
 
           {value, acc} =
-            case {opts[:yield], is_map(v) and not(s_as_v), is_list(v)} do
+            case {opts[:yield], is_map(v) and not s_as_v, is_list(v)} do
               {_, false, false} -> traverse_callback(fun, {{deep, v}, acc})
               {:all, _, _} -> traverse_callback(fun, {{deep, v}, acc})
               {:lists, _, true} -> traverse_callback(fun, {{deep, v}, acc})

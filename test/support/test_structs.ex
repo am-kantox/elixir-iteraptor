@@ -30,6 +30,19 @@ defmodule Iteraptor.Struct do
   use Iteraptor.Iteraptable
 end
 
+# defmodule Iteraptable.Struct do
+#   @moduledoc false
+#
+#   @behaviour Iteraptable
+#
+#   @name Iteraptable.prefix() <> "struct"
+#
+#   @impl Iteraptable
+#   def dump(%Iteraptor.Struct{} = s), do: %{@name => s}
+#   @impl Iteraptable
+#   def summon(s), do: s
+# end
+
 ################################################################################
 
 defprotocol Derivable do
@@ -64,4 +77,4 @@ defmodule Iteraptor.DerivedStruct do
   defstruct @fields
 end
 
-defmodule Iteraptor.BareStruct, do: defstruct foo: 42, bar: :baz
+defmodule(Iteraptor.BareStruct, do: defstruct(foo: 42, bar: :baz))

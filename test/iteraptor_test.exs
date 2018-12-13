@@ -87,12 +87,14 @@ defmodule Iteraptor.Test do
     result =
       capture_log(fn ->
         Iteraptor.each(
-          %{ok: 42, nested: %Iteraptor.BareStruct{}}, &Logger.debug(inspect(&1))
+          %{ok: 42, nested: %Iteraptor.BareStruct{}},
+          &Logger.debug(inspect(&1))
         )
       end)
-      assert result =~ "{[:nested, :bar], :baz}"
-      assert result =~ "{[:nested, :foo], 42}"
-      assert result =~ "{[:ok], 42}"
+
+    assert result =~ "{[:nested, :bar], :baz}"
+    assert result =~ "{[:nested, :foo], 42}"
+    assert result =~ "{[:ok], 42}"
   end
 
   test "handles nested structs properly with [structs: :values]" do
@@ -104,7 +106,13 @@ defmodule Iteraptor.Test do
           structs: :values
         )
       end)
-      assert result =~ "{[:nested], %Iteraptor.BareStruct{bar: :baz, foo: 42}}"
-      assert result =~ "{[:ok], 42}"
+
+    assert result =~ "{[:nested], %Iteraptor.BareStruct{bar: :baz, foo: 42}}"
+    assert result =~ "{[:ok], 42}"
+  end
+
+  test "handles iteraptable structs properly" do
+    result = Iteraptor.to_flatmap(%{today: ~D[2018-11-19], now: ~T[12:33:00]})
+    assert result == %{"now.struct_time" => "12:33:00", "today.struct_date" => "2018-11-19"}
   end
 end

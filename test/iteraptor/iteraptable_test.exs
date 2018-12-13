@@ -6,13 +6,30 @@ defmodule Iteraptor.Iteraptable.Test do
 
   test "iterapted struct is flattened" do
     assert capture_log(fn ->
-             %{m: %{field: 42}, s: %Iteraptor.Struct{field: 42}, dt: [~D[2018-11-18], ~T[13:00:07]]}
+             %{
+               m: %{field: 42},
+               s: %Iteraptor.Struct{field: 42},
+               dt: [~D[2018-11-18], ~T[13:00:07]]
+             }
              |> Iteraptor.to_flatmap()
              |> inspect()
              |> Logger.debug()
            end) =~ ~r|"dt.0.struct_date" => "2018-11-18", "dt.1.struct_time" => "13:00:07"|
-           # end) =~ ~r|"dt.0.s·date" => "2018-11-18", "dt.1.s·time" => "13:00:07"|
-        end
+
+    # end) =~ ~r|"dt.0.s·date" => "2018-11-18", "dt.1.s·time" => "13:00:07"|
+  end
+
+  test "to_flatmap |> from_flatmap" do
+    with_date_time = %{
+      m: %{field: 42},
+      s: %Iteraptor.Struct{field: 42},
+      dt: [~D[2018-11-18] |> Date.to_iso8601() |> Date.from_iso8601!(), ~T[13:00:07]]
+    }
+
+    assert with_date_time
+           |> Iteraptor.to_flatmap()
+           |> Iteraptor.from_flatmap() == with_date_time
+  end
 
   test "iterapted struct is enumerated" do
     assert capture_log(fn ->

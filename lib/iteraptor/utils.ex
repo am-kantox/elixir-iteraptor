@@ -17,6 +17,8 @@ defmodule Iteraptor.Utils do
     end
   end
 
+  @prefix Iteraptable.prefix()
+
   @doc """
   Determines the type of the given term.
 
@@ -34,21 +36,24 @@ defmodule Iteraptor.Utils do
       :error
   """
   @spec type(%{} | Keyword.t() | [...] | any()) :: {atom(), any(), any()} | :error
-  def type(input) do
-    case {Enumerable.impl_for(input), Iteraptable.impl_for(input)} do
-      {Enumerable.List, _} ->
+  def type(input, dump? \\ false) do
+    case Enumerable.impl_for(input) do
+      Enumerable.List ->
         {if(Keyword.keyword?(input), do: Keyword, else: List), input, []}
 
-      {Enumerable.Map, _} ->
+      Enumerable.Map ->
         {Map, input, %{}}
 
-      {_, i} when not is_nil(i) ->
-        {i.type(input), i.to_enumerable(input), i.to_collectable(input)}
-
-      {_, _} ->
-        if is_map(input),
-          do: {input.__struct__, Map.from_struct(input), %{}},
-          else: :error
+      _ ->
+        with %struct{} <- input,
+             true <- dump?,
+             impl = Module.concat("Iteraptable", struct),
+             true <- Code.ensure_loaded?(impl) do
+          {struct, apply(impl, :dump, [input]), %{}}
+        else
+          false -> {input.__struct__, Map.from_struct(input), %{}}
+          _ -> :error
+        end
     end
   end
 
@@ -96,12 +101,43 @@ defmodule Iteraptor.Utils do
   def delimiter(opts) when is_list(opts), do: opts[:delimiter] || @delimiter
 
   @doc false
-  @spec smart_convert(any()) :: integer() | binary() | atom()
-  def smart_convert(value) do
-    case value |> to_string() |> Integer.parse() do
-      {value, ""} -> value
-      _ -> String.to_existing_atom(value)
+  @spec smart_key(any()) :: integer() | binary()
+  def smart_key(<<@prefix, key::binary>>) do
+    impl = Module.concat("Iteraptable", Module.concat([Macro.camelize(key)]))
+
+    if Code.ensure_loaded?(impl) do
+      {:__structure__, key}
+    else
+      key
     end
+  end
+
+  def smart_key(value) when is_binary(value) do
+    value
+    |> Integer.parse()
+    |> case do
+      {value, ""} -> value
+      :error -> String.to_existing_atom(value)
+    end
+  end
+
+  def smart_key(value), do: value |> to_string() |> smart_key()
+
+  @spec smart_value(integer() | binary(), any()) :: {integer() | binary(), any()}
+  def smart_value(key, value) when is_integer(key), do: {key, value}
+
+  def smart_value(k, value) do
+    key = Module.concat([Macro.camelize(k)])
+
+    value =
+      with impl = Module.concat("Iteraptable", key),
+           true <- Code.ensure_loaded?(impl) do
+        apply(impl, :summon, [value])
+      else
+        _ -> value
+      end
+
+    {String.to_existing_atom(k), value}
   end
 
   @doc """
@@ -333,6 +369,7 @@ defmodule Iteraptor.Utils do
 
         v, {acc, orphans} ->
           case type do
+            MapSet -> {Map.put(acc, orphans, v), orphans + 1}
             Keyword -> {[v | acc], orphans}
             List -> {[v | acc], orphans}
             Map -> {Map.put(acc, orphans, v), orphans + 1}

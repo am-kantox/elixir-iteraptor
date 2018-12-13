@@ -1,49 +1,45 @@
-defprotocol Iteraptable do
+defmodule Iteraptable do
   @since "1.5.0"
   @moduledoc """
-  The protocol specifying how the respective struct might be used within `Iteraptor`.
+  The behaviour specifying how the respective struct might be used within `Iteraptor`.
 
-  **Experimental.** By implementing this protocol one might change the behaviour of
-  nested objects regarding how they should be iterated through.
+  **Experimental.** By implementing this behaviour one might how nested objects are serialized.
+
+  All the implementations should be named as `Module.concat("Iteraptable", TargetModule)`.
   """
 
-  @spec type(term :: any()) :: atom()
-  @doc "Returns a type understood by `Iteraptable`"
-  def type(term)
+  @callback dump(any()) :: map()
+  @callback summon(binary()) :: any()
 
-  @spec to_enumerable(term :: any()) :: Enumerable.t
-  @doc "Converts a term to an enumerable"
-  def to_enumerable(term)
-
-  @spec to_collectable(term :: any()) :: Collectable.t
-  @doc "Converts a term to a collectable"
-  def to_collectable(term)
-
-  @spec name(term :: any()) :: binary()
-  @doc "Returns a name of the term to be represented in flatmaps"
-  def name(term)
+  @delimiter if Version.compare(System.version(), "1.8.0") == :lt, do: "_", else: "·"
+  @prefix if(Version.compare(System.version(), "1.8.0") == :lt, do: "struct", else: "s") <>
+            @delimiter
+  @doc false
+  def prefix, do: @prefix
 end
 
-defimpl Iteraptable, for: Date do
-  def name(_term), do: "s·date"
-  def type(_term), do: Date
-  if Version.compare(System.version(), "1.8.0") == :lt  do
-    def to_enumerable(term), do: %{struct_date: Date.to_iso8601(term)}
-  else
-    def to_enumerable(term), do: %{struct_date: Date.to_iso8601(term)}
-    # def to_enumerable(term), do: %{s·date: Date.to_iso8601(term)}
-  end
-  def to_collectable(_term), do: %{}
+defmodule Iteraptable.Time do
+  @moduledoc false
+
+  @behaviour Iteraptable
+
+  @name Iteraptable.prefix() <> "time"
+
+  @impl Iteraptable
+  def dump(%Time{} = time), do: %{@name => Time.to_iso8601(time)}
+  @impl Iteraptable
+  def summon(time), do: Time.from_iso8601!(time)
 end
 
-defimpl Iteraptable, for: Time do
-  def name(_term), do: "s·time"
-  def type(_term), do: Time
-  if Version.compare(System.version(), "1.8.0") == :lt  do
-    def to_enumerable(term), do: %{struct_time: Time.to_iso8601(term)}
-  else
-    def to_enumerable(term), do: %{struct_time: Time.to_iso8601(term)}
-    # def to_enumerable(term), do: %{s·time: Time.to_iso8601(term)}
-  end
-  def to_collectable(_term), do: %{}
+defmodule Iteraptable.Date do
+  @moduledoc false
+
+  @behaviour Iteraptable
+
+  @name Iteraptable.prefix() <> "date"
+
+  @impl Iteraptable
+  def dump(%Date{} = date), do: %{@name => Date.to_iso8601(date)}
+  @impl Iteraptable
+  def summon(date), do: Date.from_iso8601!(date)
 end
