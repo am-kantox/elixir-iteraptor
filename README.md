@@ -28,7 +28,7 @@
 
 **bonus:**
 
-  * [`Iteraptor.stringify_keys/1`](https://hexdocs.pm/iteraptor/Iteraptor.html#stringify_keys/1)
+  * [`Iteraptor.jsonify/2`](https://hexdocs.pm/iteraptor/Iteraptor.html#jsonify/2)
     to prepare the term for JSON interchange; it basically converts keys to strings and keywords to maps because JSON encoders might have issues with serializing keywords.
 
   * [`Iteraptor.Extras.bury/4`](https://hexdocs.pm/iteraptor/Iteraptor.Extras.html#bury/4)
@@ -127,7 +127,7 @@ def deps, do: [{:iteraptor, "~> 1.5"}]
 
 #### `1.6.0`
 
-`Iteraptor.stringify_keys/1`.
+`Iteraptor.jsonify/2`.
 
 #### `1.5.0`
 

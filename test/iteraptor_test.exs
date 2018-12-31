@@ -77,8 +77,8 @@ defmodule Iteraptor.Test do
     assert result =~ "{[:a2, :a4, :a6, :a8], 42}"
   end
 
-  test "Iteraptor.stringify_keys/1 works" do
-    result = Iteraptor.stringify_keys(@keyword)
+  test "Iteraptor.jsonify/2 works" do
+    result = Iteraptor.jsonify(@keyword)
 
     assert result == %{
              "a1" => 42,
@@ -86,6 +86,15 @@ defmodule Iteraptor.Test do
                "a3" => 42,
                "a4" => %{"a5" => 42, "a6" => %{"a7" => 3.14, "a8" => 42}}
              }
+           }
+  end
+
+  test "Iteraptor.jsonify/2 works for values as well" do
+    result = Iteraptor.jsonify([foo: :bar, baz: [:zzz, 42]], values: true)
+
+    assert result == %{
+             "foo" => "bar",
+             "baz" => ["zzz", 42]
            }
   end
 

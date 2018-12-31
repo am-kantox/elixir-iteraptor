@@ -389,18 +389,25 @@ defmodule Iteraptor do
 
   ## Examples
 
-      iex> Iteraptor.stringify_keys(%{foo: [1, 2, 3], bar: [baz: 42]})
+      iex> Iteraptor.jsonify(%{foo: [1, 2, 3], bar: [baz: 42]})
       %{"foo" => [1, 2, 3], "bar" => %{"baz" => 42}}
-  """
-  @spec stringify_keys(Access.t()) :: %{required(binary()) => any()}
-  def stringify_keys([{_, _} | _] = input), do: input |> Enum.into(%{}) |> stringify_keys()
-  def stringify_keys(input) when not is_map(input) and not is_list(input), do: input
 
-  def stringify_keys(input) do
+      iex> Iteraptor.jsonify([foo: [:zzz], bar: :baz], values: true)
+      %{"foo" => ["zzz"], "bar" => "baz"}
+  """
+  @spec jsonify(Access.t(), opts :: list()) :: %{required(binary()) => any()}
+  def jsonify(input, opts \\ [])
+  def jsonify([{_, _} | _] = input, opts), do: input |> Enum.into(%{}) |> jsonify(opts)
+  def jsonify(input, opts) when is_list(input), do: Enum.map(input, &jsonify(&1, opts))
+
+  def jsonify(input, opts) when not is_map(input) and not is_list(input),
+    do: if(opts[:values] && is_atom(input), do: to_string(input), else: input)
+
+  def jsonify(input, opts) do
     Iteraptor.map(
       input,
       fn {k, v} when is_list(k) ->
-        {k |> List.last() |> to_string(), stringify_keys(v)}
+        {k |> List.last() |> to_string(), jsonify(v, opts)}
       end,
       yield: :all
     )
