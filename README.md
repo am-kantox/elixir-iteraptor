@@ -28,6 +28,9 @@
 
 **bonus:**
 
+  * [`Iteraptor.stringify_keys/1`](https://hexdocs.pm/iteraptor/Iteraptor.html#stringify_keys/1)
+    to prepare the term for JSON interchange; it basically converts keys to strings and keywords to maps because JSON encoders might have issues with serializing keywords.
+
   * [`Iteraptor.Extras.bury/4`](https://hexdocs.pm/iteraptor/Iteraptor.Extras.html#bury/4)
     to store the value deeply inside nested term (the intermediate keys are created as
     necessary.)
@@ -116,11 +119,15 @@ iex> Iteraptor.AST.reduce((quote do: 42), [], fn e, acc -> [e | acc], yield: :al
 Add `iteraptor` to your list of dependencies in `mix.exs`:
 
 ```elixir
-def deps, do: [{:iteraptor, "~> 1.0.0-rc1"}]
+def deps, do: [{:iteraptor, "~> 1.5"}]
 ```
 
 
 ### Changelog
+
+#### `1.6.0`
+
+`Iteraptor.stringify_keys/1`.
 
 #### `1.5.0`
 

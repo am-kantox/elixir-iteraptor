@@ -123,12 +123,13 @@ defmodule Iteraptor.Iteraptable do
   }
 
   @iteraptable (quote location: :keep do
-    defimpl Iteraptable, for: __MODULE__ do
-      def type(_), do: __MODULE__
-      def to_enumerable(term), do: term
-      def to_collectable(term), do: term
-    end
-  end)
+                  defimpl Iteraptable, for: __MODULE__ do
+                    def type(_), do: __MODULE__
+                    def name(_), do: Macro.underscore(__MODULE__)
+                    def to_enumerable(term), do: term
+                    def to_collectable(term), do: term
+                  end
+                end)
 
   @doc """
   Allows to enable iterating features on structs with `use Iteraptor.Iteraptable`

@@ -383,6 +383,29 @@ defmodule Iteraptor do
     result
   end
 
+  @doc """
+  Produces a term ready-to-use with JSON interchange. Stringifies all keys
+  and converts keywords to maps.
+
+  ## Examples
+
+      iex> Iteraptor.stringify_keys(%{foo: [1, 2, 3], bar: [baz: 42]})
+      %{"foo" => [1, 2, 3], "bar" => %{"baz" => 42}}
+  """
+  @spec stringify_keys(Access.t()) :: %{required(binary()) => any()}
+  def stringify_keys([{_, _} | _] = input), do: input |> Enum.into(%{}) |> stringify_keys()
+  def stringify_keys(input) when not is_map(input) and not is_list(input), do: input
+
+  def stringify_keys(input) do
+    Iteraptor.map(
+      input,
+      fn {k, v} when is_list(k) ->
+        {k |> List.last() |> to_string(), stringify_keys(v)}
+      end,
+      yield: :all
+    )
+  end
+
   ##############################################################################
 
   @spec traverse_callback(({any(), any()} -> any()) | (any(), any() -> any()), {any(), any()}) ::
@@ -432,7 +455,7 @@ defmodule Iteraptor do
           deep = key ++ [k]
 
           {value, acc} =
-            case {opts[:yield], is_map(v) and not(s_as_v), is_list(v)} do
+            case {opts[:yield], is_map(v) and not s_as_v, is_list(v)} do
               {_, false, false} -> traverse_callback(fun, {{deep, v}, acc})
               {:all, _, _} -> traverse_callback(fun, {{deep, v}, acc})
               {:lists, _, true} -> traverse_callback(fun, {{deep, v}, acc})
