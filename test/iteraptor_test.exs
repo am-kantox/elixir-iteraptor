@@ -77,6 +77,18 @@ defmodule Iteraptor.Test do
     assert result =~ "{[:a2, :a4, :a6, :a8], 42}"
   end
 
+  test "Iteraptor.stringify_keys/1 works" do
+    result = Iteraptor.stringify_keys(@keyword)
+
+    assert result == %{
+             "a1" => 42,
+             "a2" => %{
+               "a3" => 42,
+               "a4" => %{"a5" => 42, "a6" => %{"a7" => 3.14, "a8" => 42}}
+             }
+           }
+  end
+
   test "map[:full_parent] / each returns the original map" do
     Enum.each([{@nest, :tuple}, {@list, nil}], fn {input, full_parent} ->
       assert(input == Iteraptor.each(input, fn _ -> :ok end, full_parent: full_parent))
@@ -87,12 +99,14 @@ defmodule Iteraptor.Test do
     result =
       capture_log(fn ->
         Iteraptor.each(
-          %{ok: 42, nested: %Iteraptor.BareStruct{}}, &Logger.debug(inspect(&1))
+          %{ok: 42, nested: %Iteraptor.BareStruct{}},
+          &Logger.debug(inspect(&1))
         )
       end)
-      assert result =~ "{[:nested, :bar], :baz}"
-      assert result =~ "{[:nested, :foo], 42}"
-      assert result =~ "{[:ok], 42}"
+
+    assert result =~ "{[:nested, :bar], :baz}"
+    assert result =~ "{[:nested, :foo], 42}"
+    assert result =~ "{[:ok], 42}"
   end
 
   test "handles nested structs properly with [structs: :values]" do
@@ -104,7 +118,8 @@ defmodule Iteraptor.Test do
           structs: :values
         )
       end)
-      assert result =~ "{[:nested], %Iteraptor.BareStruct{bar: :baz, foo: 42}}"
-      assert result =~ "{[:ok], 42}"
+
+    assert result =~ "{[:nested], %Iteraptor.BareStruct{bar: :baz, foo: 42}}"
+    assert result =~ "{[:ok], 42}"
   end
 end
