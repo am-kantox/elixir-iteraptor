@@ -302,6 +302,9 @@ defmodule Iteraptor.Utils do
               MapSet ->
                 {nil, MapSet.put(acc, {k, v})}
 
+              Iteraptor.Array ->
+                {nil, Iteraptor.Array.append(acc, {k, v})}
+
               List ->
                 {nil, [{k, v} | acc]}
 
