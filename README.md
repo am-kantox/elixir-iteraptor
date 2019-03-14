@@ -125,6 +125,10 @@ def deps, do: [{:iteraptor, "~> 1.5"}]
 
 ### Changelog
 
+#### `1.7.0`
+
+`Iteraptor.Array` with `Access` support. Basically, `Array` is the list with `Access` support.
+
 #### `1.6.0`
 
 `Iteraptor.jsonify/2`.
