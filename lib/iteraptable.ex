@@ -1,5 +1,4 @@
 defprotocol Iteraptable do
-  @doc since: "1.5.0"
   @moduledoc """
   The protocol specifying how the respective struct might be used within `Iteraptor`.
 

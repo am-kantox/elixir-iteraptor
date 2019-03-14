@@ -1,5 +1,4 @@
 defmodule Iteraptor.Array do
-  @moduledoc since: "1.7.0"
   @moduledoc """
   Array emulation implementing `Access` behaviour. Index in array is zero-based.
 
