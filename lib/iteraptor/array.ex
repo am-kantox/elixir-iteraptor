@@ -16,7 +16,7 @@ defmodule Iteraptor.Array do
 
   An array can contain any kind of elements, and elements in an array don't have
     to be of the same type. By definition, arrays have _keys_ in `0..size-1` range.
-  Arrays are implicitly expandable, which means adding an elementat index `100`
+  Arrays are implicitly expandable, which means adding an element at index `100`
     to the array currently containing 1 element would increase the size of the
     array to `100`.
 
@@ -26,7 +26,7 @@ defmodule Iteraptor.Array do
 
   An `Array` is represented internally using the `%Array{}` struct. Note that,
     however, the struct fields are private and must not be accessed directly;
-    use the functions in this module to perform operations on sets.
+    use the functions in this module to perform operations on arrays.
 
   `Array`s can also be constructed starting from other collection-type data
   structures: for example, see `Array.new/1` or `Enum.into/2`.
@@ -209,6 +209,30 @@ defmodule Iteraptor.Array do
   end
 
   @doc """
+  Trims `nil` values from the tail of the `Array`. Returns a trimmed array.
+
+  ## Examples
+      iex> array = Iteraptor.Array.new([42, nil, nil])
+      #Array<[42, nil, nil]>
+      iex> Iteraptor.Array.trim(array)
+      #Array<[42]>
+  """
+  @spec trim(t(val)) :: t(val) when val: value
+  def trim(%Array{map: map} = array) do
+    map =
+      map
+      |> Enum.reverse()
+      |> Enum.drop_while(fn
+        {_, nil} -> true
+        _ -> false
+      end)
+      |> Enum.reverse()
+      |> Enum.into(%{})
+
+    %Array{array | map: map}
+  end
+
+  @doc """
   Returns the number of elements in `array`.
   ## Examples
       iex> Iteraptor.Array.size(Iteraptor.Array.new([1, 2, 3]))
@@ -225,6 +249,18 @@ defmodule Iteraptor.Array do
   """
   @spec to_list(t(val)) :: [val] when val: value
   def to_list(%Array{map: map}), do: Map.values(map)
+
+  @doc """
+  Converts a tuple given as parameter to `array`.
+  ## Examples
+      iex> Iteraptor.Array.from_tuple({1, 2, 3})
+      #Array<[1, 2, 3]>
+  """
+  @spec from_tuple(tuple :: tuple()) :: t(val) when val: value
+  def from_tuple(tuple) when is_tuple(tuple),
+    do: tuple |> Tuple.to_list() |> Array.new()
+
+  ### Access behaviour
 
   @doc false
   @impl true
