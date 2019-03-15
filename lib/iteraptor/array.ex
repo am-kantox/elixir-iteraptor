@@ -245,7 +245,8 @@ defmodule Iteraptor.Array do
       [1, 2, 3]
   """
   @spec to_list(t(val)) :: [val] when val: value
-  def to_list(%Array{map: map}), do: Map.values(map)
+  def to_list(%Array{map: map}),
+    do: map |> Enum.sort() |> Enum.map(&elem(&1, 1))
 
   @doc """
   Converts a tuple given as parameter to `array`.
