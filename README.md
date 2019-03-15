@@ -129,6 +129,8 @@ def deps, do: [{:iteraptor, "~> 1.5"}]
 
 `Iteraptor.Array` with `Access` support. Basically, `Array` is the list with `Access` support.
 
+- `1.7.2` → fixed bug with type recognition for `MapSet` and `Iteraptor.Array`.
+
 #### `1.6.0`
 
 `Iteraptor.jsonify/2`.

@@ -58,7 +58,7 @@ defmodule Iteraptor.Array do
 
   @doc """
   Returns a new array.
-  ## Examples
+
       iex> Iteraptor.Array.new()
       #Array<[]>
   """
@@ -70,7 +70,7 @@ defmodule Iteraptor.Array do
 
   @doc """
   Creates an array of the given length.
-  ## Examples
+
       iex> Iteraptor.Array.new(3)
       #Array<[nil, nil, nil]>
   """
@@ -80,7 +80,7 @@ defmodule Iteraptor.Array do
 
   @doc """
   Creates an array from an enumerable.
-  ## Examples
+
       iex> Iteraptor.Array.new([:foo, :bar, 42])
       #Array<[:foo, :bar, 42]>
   """
@@ -100,7 +100,7 @@ defmodule Iteraptor.Array do
 
   @doc """
   Creates an array from an enumerable via the transformation function.
-  ## Examples
+
       iex> Iteraptor.Array.new([1, 2, 3], fn x -> 2 * x end)
       #Array<[2, 4, 6]>
   """
@@ -121,7 +121,7 @@ defmodule Iteraptor.Array do
 
   @doc """
   Appends another enumerable to the array.
-  ## Examples
+
       iex> array = Iteraptor.Array.new([1, 2, 3])
       iex> Iteraptor.Array.append(array, [4, 5])
       #Array<[1, 2, 3, 4, 5]>
@@ -150,7 +150,7 @@ defmodule Iteraptor.Array do
   @doc """
   Returns the `value` at `index` in `array`, or `default` if index is out of array bounds.
 
-  ## Examples
+
       iex> array = Iteraptor.Array.new([42])
       iex> Iteraptor.Array.get(array, 0)
       42
@@ -167,7 +167,6 @@ defmodule Iteraptor.Array do
     respective index to `nil`.
   Returns a tuple containing the value removed and the new array.
 
-  ## Examples
       iex> array = Iteraptor.Array.new([1, 2, 3])
       iex> {elem, array} = Iteraptor.Array.pop(array, 1)
       iex> elem
@@ -186,7 +185,6 @@ defmodule Iteraptor.Array do
   Sets the `value` at `index` in `array`, expanding the array if necessary.
   Returns a new array.
 
-  ## Examples
       iex> array = Iteraptor.Array.new([42])
       iex> Iteraptor.Array.set(array, 0, :foo)
       #Array<[:foo]>
@@ -211,7 +209,6 @@ defmodule Iteraptor.Array do
   @doc """
   Trims `nil` values from the tail of the `Array`. Returns a trimmed array.
 
-  ## Examples
       iex> array = Iteraptor.Array.new([42, nil, nil])
       #Array<[42, nil, nil]>
       iex> Iteraptor.Array.trim(array)
@@ -234,7 +231,7 @@ defmodule Iteraptor.Array do
 
   @doc """
   Returns the number of elements in `array`.
-  ## Examples
+
       iex> Iteraptor.Array.size(Iteraptor.Array.new([1, 2, 3]))
       3
   """
@@ -243,7 +240,7 @@ defmodule Iteraptor.Array do
 
   @doc """
   Converts `array` to a list.
-  ## Examples
+
       iex> Iteraptor.Array.to_list(Iteraptor.Array.new([1, 2, 3]))
       [1, 2, 3]
   """
@@ -252,7 +249,7 @@ defmodule Iteraptor.Array do
 
   @doc """
   Converts a tuple given as parameter to `array`.
-  ## Examples
+
       iex> Iteraptor.Array.from_tuple({1, 2, 3})
       #Array<[1, 2, 3]>
   """

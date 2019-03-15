@@ -35,17 +35,23 @@ defmodule Iteraptor.Utils do
   """
   @spec type(%{} | Keyword.t() | [...] | any()) :: {atom(), any(), any()} | :error
   def type(input) do
-    case {Enumerable.impl_for(input), Iteraptable.impl_for(input)} do
-      {Enumerable.List, _} ->
+    case {input, Enumerable.impl_for(input), Iteraptable.impl_for(input)} do
+      {%MapSet{}, _, _} ->
+        {MapSet, input, MapSet.new()}
+
+      {%Iteraptor.Array{}, _, _} ->
+        {Iteraptor.Array, input, Iteraptor.Array.new()}
+
+      {_, Enumerable.List, _} ->
         {if(Keyword.keyword?(input), do: Keyword, else: List), input, []}
 
-      {Enumerable.Map, _} ->
+      {_, Enumerable.Map, _} ->
         {Map, input, %{}}
 
-      {_, i} when not is_nil(i) ->
+      {_, _, i} when not is_nil(i) ->
         {i.type(input), i.to_enumerable(input), i.to_collectable(input)}
 
-      {_, _} ->
+      {_, _, _} ->
         if is_map(input),
           do: {input.__struct__, Map.from_struct(input), %{}},
           else: :error
