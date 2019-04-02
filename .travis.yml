@@ -1,8 +1,9 @@
 language: elixir
 elixir:
-    - 1.5.2
-    - 1.6.2
-    - 1.7.2
+  - '1.7.2'
+  - '1.8.1'
+otp_release:
+  - '21.2.7'
 after_script:
   - MIX_ENV=docs mix deps.get
   - MIX_ENV=docs mix inch.report
