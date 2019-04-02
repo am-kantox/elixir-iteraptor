@@ -125,6 +125,11 @@ def deps, do: [{:iteraptor, "~> 1.5"}]
 
 ### Changelog
 
+#### `1.8.0`
+
+`Iteraptor.Config` for deep substitution of `{:system, "VAR"}` tuples with the
+  values taken from the system environment in runtime.
+
 #### `1.7.0`
 
 `Iteraptor.Array` with `Access` support. Basically, `Array` is the list with `Access` support.

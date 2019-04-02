@@ -112,7 +112,7 @@ defmodule Property.Iteraptor.Test do
         |> Iteraptor.to_flatmap()
         |> Map.values()
 
-      assert reduced == mapped
+      assert reduced == mapped or ["." | reduced] == mapped
     end
   end
 
