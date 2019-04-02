@@ -72,6 +72,7 @@ defmodule Iteraptor.Mixfile do
 
         Extras: [
           Iteraptor.Array,
+          Iteraptor.Config,
           Iteraptor.Extras,
           Iteraptor.Iteraptable
         ],
