@@ -26,7 +26,7 @@ defmodule Iteraptor.Config do
       iex> Application.get_all_env(:iteraptor)
       [key: [value: [value: 42]]]
   """
-  @spec from_env(app :: atom(), converter :: (binary() -> any()), key :: atom()) :: Keyword.t()
+  @spec from_env(app :: atom(), converter :: (binary() -> any()), key :: atom()) :: :ok
   def from_env(app, converter \\ & &1, key \\ :system) when is_function(converter, 1) do
     app
     |> Application.get_all_env()
