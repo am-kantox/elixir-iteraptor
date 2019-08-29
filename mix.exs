@@ -3,7 +3,7 @@ defmodule Iteraptor.Mixfile do
 
   @app :iteraptor
   @github "am-kantox/elixir-#{@app}"
-  @version "1.8.0"
+  @version "1.9.0"
 
   def project do
     [
@@ -17,7 +17,11 @@ defmodule Iteraptor.Mixfile do
       package: package(),
       deps: deps(),
       docs: docs(),
-      xref: [exclude: []]
+      xref: [exclude: []],
+      dialyzer: [
+        plt_file: {:no_warn, ".dialyzer/plts/dialyzer.plt"},
+        ignore_warnings: ".dialyzer/ignore.exs"
+      ]
     ]
   end
 
@@ -31,9 +35,9 @@ defmodule Iteraptor.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
-      {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
-      {:credo, "~> 1.0", only: [:dev, :test]},
-      {:stream_data, "~> 0.4", only: :test},
+      {:dialyxir, "~> 1.0.0-rc.6", only: [:dev], runtime: false},
+      {:credo, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:stream_data, "~> 0.4", only: [:test], runtime: false},
       {:ex_doc, "~> 0.19", only: :dev},
       {:inch_ex, "~> 2.0", only: :docs}
     ]

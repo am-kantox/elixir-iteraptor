@@ -47,8 +47,7 @@ defmodule Iteraptor.Array do
 
   @type value :: term
 
-  @opaque t(value) :: %__MODULE__{map: %{required(non_neg_integer) => value}}
-  @type t :: t(term)
+  @type t :: %__MODULE__{map: %{required(non_neg_integer) => any()}}
 
   defstruct map: %{}, version: 1
 
@@ -62,32 +61,33 @@ defmodule Iteraptor.Array do
       iex> Iteraptor.Array.new()
       #Array<[]>
   """
-  @spec new :: t
-  def new(), do: %Array{}
 
-  @spec new(integer() | Enum.t()) :: t
-  def new(enumerable)
+  # @spec new(enumerable :: nil | t() | integer() | Enum.t(), transform :: (term() -> any())) :: t()
+  def new(enumerable \\ nil, transform \\ nil)
 
   @doc """
-  Creates an array of the given length.
+  Creates an array of the given length or from enumerable. Might we used to wrap
+  the existing instance of `Iteraptor.Array`.
 
       iex> Iteraptor.Array.new(3)
       #Array<[nil, nil, nil]>
-  """
-  @spec new :: t
-  def new(n) when is_integer(n) and n >= 0,
-    do: Iteraptor.Array.new(List.duplicate(nil, n))
-
-  @doc """
-  Creates an array from an enumerable.
 
       iex> Iteraptor.Array.new([:foo, :bar, 42])
       #Array<[:foo, :bar, 42]>
+
+  Also the transformation function might be passed via second argument.
+
+      iex> Iteraptor.Array.new([1, 2, 3], fn x -> 2 * x end)
+      #Array<[2, 4, 6]>
   """
+  def new(nil, nil), do: %Array{}
 
-  def new(%__MODULE__{} = array), do: array
+  def new(%__MODULE__{} = array, nil), do: array
 
-  def new(enumerable) do
+  def new(n, nil) when is_integer(n) and n >= 0,
+    do: Iteraptor.Array.new(List.duplicate(nil, n))
+
+  def new(enumerable, nil) do
     list = Enum.to_list(enumerable)
 
     map =
@@ -98,13 +98,6 @@ defmodule Iteraptor.Array do
     %Array{map: map}
   end
 
-  @doc """
-  Creates an array from an enumerable via the transformation function.
-
-      iex> Iteraptor.Array.new([1, 2, 3], fn x -> 2 * x end)
-      #Array<[2, 4, 6]>
-  """
-  @spec new(Enum.t(), (term -> val)) :: t(val) when val: value
   def new(enumerable, transform) when is_function(transform, 1) do
     list =
       enumerable
@@ -126,7 +119,7 @@ defmodule Iteraptor.Array do
       iex> Iteraptor.Array.append(array, [4, 5])
       #Array<[1, 2, 3, 4, 5]>
   """
-  @spec append(t(val1), any()) :: t(val1) when val1: value
+  @spec append(t(), any()) :: t()
   def append(%Array{map: map} = array, other) do
     index = map |> Map.keys() |> List.last() || -1
 
@@ -157,7 +150,7 @@ defmodule Iteraptor.Array do
       iex> Iteraptor.Array.get(array, 2, 42)
       42
   """
-  @spec get(t(val), non_neg_integer(), any()) :: val when val: value
+  @spec get(t(), non_neg_integer(), any()) :: any()
   def get(array, index, default \\ nil)
   def get(%Array{map: map}, index, default) when index < 0 or index >= map_size(map), do: default
   def get(%Array{map: map}, index, _default), do: map[index]
@@ -175,7 +168,7 @@ defmodule Iteraptor.Array do
       #Array<[1, nil, 3]>
   """
   @impl Access
-  @spec pop(t(val1), non_neg_integer()) :: {val1, t(val1)} when val1: value
+  @spec pop(t(), non_neg_integer()) :: {any(), t()}
   def pop(%Array{map: map} = array, index) do
     value = map[index]
     {value, %{array | map: Map.put(map, index, nil)}}
@@ -191,7 +184,7 @@ defmodule Iteraptor.Array do
       iex> Iteraptor.Array.set(array, 2, :bar)
       #Array<[42, nil, :bar]>
   """
-  @spec set(t(val), non_neg_integer(), val) :: t(val) when val: value
+  @spec set(t(), non_neg_integer(), any()) :: t()
   def set(%Array{map: map} = array, index, value) do
     size = Array.size(array)
 
@@ -214,7 +207,7 @@ defmodule Iteraptor.Array do
       iex> Iteraptor.Array.trim(array)
       #Array<[42]>
   """
-  @spec trim(t(val)) :: t(val) when val: value
+  @spec trim(array :: t()) :: t()
   def trim(%Array{map: map} = array) do
     map =
       map
@@ -235,7 +228,7 @@ defmodule Iteraptor.Array do
       iex> Iteraptor.Array.size(Iteraptor.Array.new([1, 2, 3]))
       3
   """
-  @spec size(t) :: non_neg_integer
+  @spec size(t()) :: non_neg_integer()
   def size(%Array{map: map}), do: map_size(map)
 
   @doc """
@@ -244,7 +237,7 @@ defmodule Iteraptor.Array do
       iex> Iteraptor.Array.to_list(Iteraptor.Array.new([1, 2, 3]))
       [1, 2, 3]
   """
-  @spec to_list(t(val)) :: [val] when val: value
+  @spec to_list(t()) :: [any()]
   def to_list(%Array{map: map}),
     do: map |> Enum.sort() |> Enum.map(&elem(&1, 1))
 
@@ -254,7 +247,7 @@ defmodule Iteraptor.Array do
       iex> Iteraptor.Array.from_tuple({1, 2, 3})
       #Array<[1, 2, 3]>
   """
-  @spec from_tuple(tuple :: tuple()) :: t(val) when val: value
+  @spec from_tuple(tuple :: tuple()) :: t()
   def from_tuple(tuple) when is_tuple(tuple),
     do: tuple |> Tuple.to_list() |> Array.new()
 
@@ -286,8 +279,17 @@ defmodule Iteraptor.Array do
        end)}
     end
 
-    def slice(array),
-      do: {:ok, Array.size(array), &Enumerable.List.slice(Array.to_list(array), &1, &2)}
+    if Version.compare(System.version(), "1.10.0-dev") == :lt do
+      def slice(array) do
+        {:ok, Array.size(array), &Enumerable.List.slice(Array.to_list(array), &1, &2)}
+      end
+    else
+      def slice(array) do
+        size = Array.size(array)
+
+        {:ok, size, &Enumerable.List.slice(Array.to_list(array), &1, &2, size)}
+      end
+    end
 
     def reduce(array, acc, fun),
       do: Enumerable.List.reduce(Array.to_list(array), acc, fun)

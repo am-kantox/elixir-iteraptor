@@ -33,7 +33,7 @@ defmodule Iteraptor.Utils do
       iex> Iteraptor.Utils.type(42)
       :error
   """
-  @spec type(%{} | Keyword.t() | [...] | any()) :: {atom(), any(), any()} | :error
+  @spec type(%{} | keyword() | list() | any()) :: {atom(), any(), any()} | :error
   def type(input) do
     case {input, Enumerable.impl_for(input), Iteraptable.impl_for(input)} do
       {%MapSet{}, _, _} ->
@@ -72,7 +72,7 @@ defmodule Iteraptor.Utils do
       iex> Iteraptor.Utils.dig([k1: %{k2: [k3: :value]}])
       {:ok, {[:k1, :k2, :k3], :value}}
   """
-  @spec dig(%{} | Keyword.t(), Keyword.t()) :: {:ok, {[...], any()}} | {:error, any()}
+  @spec dig(%{} | keyword(), keyword()) :: {:ok, {list(), any()}} | {:error, any()}
   def dig(input, acc \\ [])
   def dig(_, {:error, _} = error), do: error
 
@@ -87,7 +87,7 @@ defmodule Iteraptor.Utils do
   def dig(input, _) when is_list(input), do: {:error, input}
   def dig(input, acc), do: {:ok, {:lists.reverse(acc), input}}
 
-  @spec dig!(%{} | Keyword.t(), Keyword.t()) :: {[...], any()} | no_return()
+  @spec dig!(%{} | keyword(), keyword()) :: {list(), any()} | no_return()
   def dig!(input, acc \\ []) do
     case dig(input, acc) do
       {:ok, result} -> result
@@ -98,7 +98,7 @@ defmodule Iteraptor.Utils do
   @delimiter Application.get_env(:iteraptor, :delimiter, ".")
 
   @doc false
-  @spec delimiter([...]) :: binary()
+  @spec delimiter(list()) :: binary()
   def delimiter(opts) when is_list(opts), do: opts[:delimiter] || @delimiter
 
   @doc false
@@ -124,7 +124,7 @@ defmodule Iteraptor.Utils do
       iex> Iteraptor.Utils.split("a.b.c.d", transform: :safe)
       [:a, :b, :c, :d]
   """
-  @spec split(String.t(), Keyword.t()) :: [String.t() | atom()]
+  @spec split(input :: binary(), opts :: keyword()) :: [binary() | atom()]
   def split(input, opts \\ []) when is_binary(input) do
     result = String.split(input, delimiter(opts))
 
@@ -145,10 +145,9 @@ defmodule Iteraptor.Utils do
       iex> Iteraptor.Utils.join(~w|a b c d|, delimiter: "_")
       "a_b_c_d"
   """
-  @spec join(Enumerable.t(), Keyword.t()) :: String.t()
-  def join(input, opts \\ []) when is_list(input) do
-    Enum.join(input, delimiter(opts))
-  end
+  @spec join(Enum.t(), keyword()) :: binary()
+  def join(input, opts \\ []) when is_list(input),
+    do: Enum.join(input, delimiter(opts))
 
   @into Application.get_env(:iteraptor, :into, %{})
 
@@ -170,7 +169,7 @@ defmodule Iteraptor.Utils do
       %{a: [:foo, %{b: 42}, {:b, :foo}]}
   """
 
-  @spec deep_put_in(%{} | Keyword.t(), {[...], any()}, Keyword.t()) :: %{} | Keyword.t()
+  @spec deep_put_in(%{} | keyword(), {list(), any()}, keyword()) :: %{} | keyword()
   def deep_put_in(target, key_value, opts \\ [])
 
   def deep_put_in(target, {[key], value}, _opts) do
@@ -228,7 +227,7 @@ defmodule Iteraptor.Utils do
       iex> Iteraptor.Utils.quacks_as_list(42)
       false
   """
-  @spec quacks_as_list(%{} | Keyword.t() | any()) :: true | false
+  @spec quacks_as_list(%{} | keyword() | any()) :: true | false
   def quacks_as_list(input) when is_list(input) or is_map(input) do
     input
     |> Enum.map(fn
@@ -261,7 +260,7 @@ defmodule Iteraptor.Utils do
       iex> Iteraptor.Utils.try_to_list(%{"5" => :foo, "1" => :bar})
       %{"5" => :foo, "1" => :bar}
   """
-  @spec try_to_list(any()) :: [...] | any()
+  @spec try_to_list(any()) :: list() | any()
   def try_to_list(input) do
     if quacks_as_list(input) do
       input
@@ -296,7 +295,7 @@ defmodule Iteraptor.Utils do
       iex> Iteraptor.Utils.squeeze([a: [:foo, :bar], a: [b: [c: 3.14]]])
       [a: [:foo, :bar, {:b, [c: 3.14]}]]
   """
-  @spec squeeze(%{} | Keyword.t() | [...] | Access.t()) :: %{} | Keyword.t() | [...]
+  @spec squeeze(%{} | keyword() | list() | Access.t()) :: %{} | keyword() | list()
   def squeeze(input) when is_map(input) or is_list(input) do
     {type, input, into} = type(input)
 
