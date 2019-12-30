@@ -125,6 +125,10 @@ def deps, do: [{:iteraptor, "~> 1.5"}]
 
 ### Changelog
 
+#### `1.10.0`
+
+`Iteraptor.jsonify/2` for deep conversion of keyword lists to maps.
+
 #### `1.8.0`
 
 `Iteraptor.Config` for deep substitution of `{:system, "VAR"}` tuples with the
