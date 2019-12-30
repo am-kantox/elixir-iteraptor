@@ -2,8 +2,7 @@
 
 [![Build Status](https://travis-ci.org/am-kantox/elixir-iteraptor.svg?branch=master)](https://travis-ci.org/am-kantox/elixir-iteraptor)
 [![Inline docs](http://inch-ci.org/github/am-kantox/elixir-iteraptor.svg)](http://inch-ci.org/github/am-kantox/elixir-iteraptor)
-[![Deps Status](https://beta.hexfaktor.org/badge/all/github/am-kantox/elixir-iteraptor.svg)](https://beta.hexfaktor.org/github/am-kantox/elixir-iteraptor)
-[![Hex.pm](https://img.shields.io/badge/hex-v.1.0.4-blue.svg?style=flat)](https://hex.pm/packages/iteraptor)
+[![Hex.pm](https://img.shields.io/badge/hex-v.1.10.1-blue.svg?style=flat)](https://hex.pm/packages/iteraptor)
 
 ### Handy enumerable operations
 
@@ -17,6 +16,8 @@
     to map and reduce a deeply nested map/list/keyword;
   * [`Iteraptor.filter/3`](https://hexdocs.pm/iteraptor/Iteraptor.html#filter/3)
     to filter a deeply nested map/list/keyword;
+  * [`Iteraptor.jsonify/2`](https://hexdocs.pm/iteraptor/Iteraptor.html#jsonify/2)
+    to convert all the deeply nested keywords into maps;
   * [`Iteraptor.to_flatmap/2`](https://hexdocs.pm/iteraptor/Iteraptor.html#to_flatmap/2)
     to flatten a deeply nested map/list/keyword into
     flatten map with concatenated keys;
