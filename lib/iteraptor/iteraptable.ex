@@ -178,8 +178,6 @@ defmodule Iteraptor.Iteraptable do
 
     init =
       case [Enumerable, Collectable] -- excluded do
-        # TODO make it better: construct the implementation,
-        #      based on what is presented; others should raise
         [Enumerable, Collectable] -> [checker, @iteraptable | derive]
         _ -> [checker | derive]
       end

@@ -296,6 +296,7 @@ defmodule Iteraptor.Utils do
       [a: [:foo, :bar, {:b, [c: 3.14]}]]
   """
   @spec squeeze(%{} | keyword() | list() | Access.t()) :: %{} | keyword() | list()
+  # credo:disable-for-lines:59
   def squeeze(input) when is_map(input) or is_list(input) do
     {type, input, into} = type(input)
 

@@ -39,7 +39,7 @@ defmodule Iteraptor.AST do
   def map(input, fun, opts \\ [])
 
   def map(input, fun, opts) when is_binary(input) do
-    with {:ok, ast} = Code.string_to_quoted(input), do: map(ast, fun, opts)
+    with {:ok, ast} <- Code.string_to_quoted(input), do: map(ast, fun, opts)
   end
 
   def map(input, fun, opts) do
@@ -87,8 +87,8 @@ defmodule Iteraptor.AST do
   ##############################################################################
 
   defp do_traverse(string, acc, fun, opts) when is_binary(string) do
-    with {:ok, ast} = Code.string_to_quoted(string),
-      do: do_traverse(ast, acc, fun, opts)
+    with {:ok, ast} <- Code.string_to_quoted(string),
+         do: do_traverse(ast, acc, fun, opts)
   end
 
   defp do_traverse({var, meta, val}, acc, fun, _opts)

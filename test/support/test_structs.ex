@@ -64,4 +64,7 @@ defmodule Iteraptor.DerivedStruct do
   defstruct @fields
 end
 
-defmodule Iteraptor.BareStruct, do: defstruct foo: 42, bar: :baz
+defmodule Iteraptor.BareStruct do
+  @moduledoc false
+  defstruct(foo: 42, bar: :baz)
+end

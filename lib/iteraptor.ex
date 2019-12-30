@@ -448,6 +448,7 @@ defmodule Iteraptor do
 
   defp traverse(input, fun, opts, key_acc)
 
+  # credo:disable-for-lines:41
   defp traverse(input, fun, opts, {key, acc}) when is_list(input) or is_map(input) do
     {type, from, into} = type(input)
 

@@ -83,13 +83,13 @@ defmodule Property.Iteraptor.Test do
       )
 
   test "#each/3 returns itself" do
-    check all term <- maybe_leaf(), max_runs: 25 do
+    check all(term <- maybe_leaf(), max_runs: 25) do
       assert Iteraptor.each(term, &inspect/1) == term
     end
   end
 
   test "#map/3 sets all leaves" do
-    check all term <- maybe_leaf(), max_runs: 25 do
+    check all(term <- maybe_leaf(), max_runs: 25) do
       result =
         term
         |> Iteraptor.map(fn _ -> "." end)
@@ -103,7 +103,7 @@ defmodule Property.Iteraptor.Test do
   end
 
   test "#reduce/4 has same leaves as a mapper" do
-    check all term <- maybe_leaf(), max_runs: 25 do
+    check all(term <- maybe_leaf(), max_runs: 25) do
       reduced = Iteraptor.reduce(term, [], fn _, acc -> ["." | acc] end)
 
       mapped =
@@ -117,7 +117,7 @@ defmodule Property.Iteraptor.Test do
   end
 
   test "#map_reduce/4 mimics 2 tests above :)" do
-    check all term <- maybe_leaf(), max_runs: 25 do
+    check all(term <- maybe_leaf(), max_runs: 25) do
       map_reducer = fn {k, _}, acc ->
         {{k, "."}, ["." | acc]}
       end

@@ -1,0 +1,21 @@
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: elixir:1.9.1-slim
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install Dependencies
+      run: |
+        MIX_ENV=ci mix local.rebar --force
+        MIX_ENV=ci mix local.hex --force
+        MIX_ENV=ci mix deps.get
+    - name: Run All Tests
+      run: MIX_ENV=ci mix test
