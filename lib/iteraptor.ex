@@ -389,11 +389,14 @@ defmodule Iteraptor do
 
   ## Examples
 
-      iex> Iteraptor.jsonify(%{foo: [1, 2, 3], bar: [baz: 42]})
-      %{"foo" => [1, 2, 3], "bar" => %{"baz" => 42}}
-
       iex> Iteraptor.jsonify([foo: [:zzz], bar: :baz], values: true)
       %{"foo" => ["zzz"], "bar" => "baz"}
+
+      iex> Iteraptor.jsonify(%{foo: [1, [bar: 2], 3], bar: [baz: 42]})
+      %{"foo" => [1, %{"bar" => 2}, 3], "bar" => %{"baz" => 42}}
+
+      iex> Iteraptor.jsonify([foo: [bar: [baz: :zoo], boo: 42]], values: true)
+      %{"foo" => %{"bar" => %{"baz" => "zoo"}, "boo" => 42}}
   """
   @spec jsonify(Access.t(), opts :: list()) :: %{required(binary()) => any()}
   def jsonify(input, opts \\ [])
@@ -406,8 +409,12 @@ defmodule Iteraptor do
   def jsonify(input, opts) do
     Iteraptor.map(
       input,
-      fn {k, v} when is_list(k) ->
-        {k |> List.last() |> to_string(), jsonify(v, opts)}
+      fn
+        {k, [{_, _} | _] = kw} when is_list(k) ->
+          {k |> List.last() |> to_string(), Map.new(jsonify(kw, opts))}
+
+        {k, v} when is_list(k) ->
+          {k |> List.last() |> to_string(), jsonify(v, opts)}
       end,
       yield: :all
     )
