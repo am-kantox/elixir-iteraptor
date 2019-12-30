@@ -16,8 +16,6 @@
     to map and reduce a deeply nested map/list/keyword;
   * [`Iteraptor.filter/3`](https://hexdocs.pm/iteraptor/Iteraptor.html#filter/3)
     to filter a deeply nested map/list/keyword;
-  * [`Iteraptor.jsonify/2`](https://hexdocs.pm/iteraptor/Iteraptor.html#jsonify/2)
-    to convert all the deeply nested keywords into maps;
   * [`Iteraptor.to_flatmap/2`](https://hexdocs.pm/iteraptor/Iteraptor.html#to_flatmap/2)
     to flatten a deeply nested map/list/keyword into
     flatten map with concatenated keys;
@@ -29,8 +27,7 @@
 
 **bonus:**
 
-  * [`Iteraptor.jsonify/2`](https://hexdocs.pm/iteraptor/Iteraptor.html#jsonify/2)
-    to prepare the term for JSON interchange; it basically converts keys to strings and keywords to maps because JSON encoders might have issues with serializing keywords.
+  * [`Iteraptor.jsonify/2`](https://hexdocs.pm/iteraptor/Iteraptor.html#jsonify/2) to prepare the term for JSON interchange; it basically converts keys to strings and keywords to maps because JSON encoders might have issues with serializing keywords.
 
   * [`Iteraptor.Extras.bury/4`](https://hexdocs.pm/iteraptor/Iteraptor.Extras.html#bury/4)
     to store the value deeply inside nested term (the intermediate keys are created as
