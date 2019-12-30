@@ -99,6 +99,9 @@ iex> %{"a.b.c": 42, "a.b.d.0": nil, "a.b.d.1": 42, "a.e.0": :f, "a.e.1": 42}
 #### Extras
 
 ```elixir
+iex> Iteraptor.jsonify([foo: [bar: [baz: :zoo], boo: 42]], values: true)
+%{"foo" => %{"bar" => %{"baz" => "zoo"}, "boo" => 42}}
+
 iex> Iteraptor.Extras.bury([foo: :bar], ~w|a b c d|a, 42)
 [a: [b: [c: [d: 42]]], foo: :bar]
 ```

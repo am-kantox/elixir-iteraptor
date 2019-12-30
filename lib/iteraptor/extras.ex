@@ -19,7 +19,8 @@ defmodule Iteraptor.Extras do
       iex> Iteraptor.Extras.bury(42, ~w|a b c d|a, 42)
       ** (Iteraptor.Utils.Unsupported) Unsupported term 42 in call to Iteraptor.Extras.bury/4.
   """
-  @spec bury(Access.t(), [...], any(), :default | :map | :keyword | Keyword.t()) :: Access.t()
+  @spec bury(Access.t(), [...], any(), [{:into, :default | :map | :keyword}] | Keyword.t()) ::
+          Access.t()
   def bury(term, key, value, opts \\ [into: :default])
 
   def bury(term, key, value, into: :default) do
