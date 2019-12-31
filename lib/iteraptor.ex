@@ -398,12 +398,12 @@ defmodule Iteraptor do
       iex> Iteraptor.jsonify([foo: [bar: [baz: :zoo], boo: 42]], values: true)
       %{"foo" => %{"bar" => %{"baz" => "zoo"}, "boo" => 42}}
   """
-  @spec jsonify(Access.t(), opts :: list()) :: %{required(binary()) => any()}
+  @spec jsonify(Access.container() | any(), opts :: list()) :: %{required(binary()) => any()}
   def jsonify(input, opts \\ [])
-  def jsonify([{_, _} | _] = input, opts), do: input |> Enum.into(%{}) |> jsonify(opts)
+  def jsonify([{_, _} | _] = input, opts), do: input |> Map.new() |> jsonify(opts)
   def jsonify(input, opts) when is_list(input), do: Enum.map(input, &jsonify(&1, opts))
 
-  def jsonify(input, opts) when not is_map(input) and not is_list(input),
+  def jsonify(input, opts) when not (is_map(input) or is_list(input)),
     do: if(opts[:values] && is_atom(input), do: to_string(input), else: input)
 
   def jsonify(input, opts) do
@@ -411,7 +411,7 @@ defmodule Iteraptor do
       input,
       fn
         {k, [{_, _} | _] = kw} when is_list(k) ->
-          {k |> List.last() |> to_string(), Map.new(jsonify(kw, opts))}
+          {k |> List.last() |> to_string(), jsonify(kw, opts)}
 
         {k, v} when is_list(k) ->
           {k |> List.last() |> to_string(), jsonify(v, opts)}

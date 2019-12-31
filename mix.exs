@@ -3,7 +3,7 @@ defmodule Iteraptor.Mixfile do
 
   @app :iteraptor
   @github "am-kantox/elixir-#{@app}"
-  @version "1.10.1"
+  @version "1.10.2"
 
   def project do
     [
@@ -39,8 +39,7 @@ defmodule Iteraptor.Mixfile do
       {:dialyxir, "~> 1.0.0-rc.6", only: [:ci, :dev], runtime: false},
       {:credo, "~> 1.0", only: [:ci, :dev, :test], runtime: false},
       {:stream_data, "~> 0.4", only: [:ci, :test], runtime: false},
-      {:ex_doc, "~> 0.19", only: :dev},
-      {:inch_ex, "~> 2.0", only: :docs}
+      {:ex_doc, "~> 0.19", only: :dev}
     ]
   end
 

@@ -39,6 +39,7 @@ defmodule Iteraptor.Iteraptable.Test do
     assert Derivable.ok(ds) == {:ok, ds, %{ds | field: nil}}
   end
 
+  @tag capture_log: true
   test "prevents inclusion into non-structs" do
     assert_raise UndefinedFunctionError,
                  ~r|function Bad.__struct__/0 is undefined|,

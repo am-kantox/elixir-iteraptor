@@ -106,13 +106,16 @@ defmodule Property.Iteraptor.Test do
     check all(term <- maybe_leaf(), max_runs: 25) do
       reduced = Iteraptor.reduce(term, [], fn _, acc -> ["." | acc] end)
 
-      mapped =
+      mapped_count =
         term
         |> Iteraptor.map(fn _ -> "." end)
         |> Iteraptor.to_flatmap()
         |> Map.values()
+        |> Enum.count(&(&1 == "."))
 
-      assert reduced == mapped or ["." | reduced] == mapped
+      reduced_count = Enum.count(reduced, &(&1 == "."))
+
+      assert_in_delta mapped_count, reduced_count, 1
     end
   end
 
@@ -124,7 +127,15 @@ defmodule Property.Iteraptor.Test do
 
       {mapped, reduced} = Iteraptor.map_reduce(term, [], map_reducer)
 
-      assert reduced == mapped |> Iteraptor.to_flatmap() |> Map.values()
+      mapped_count =
+        mapped
+        |> Iteraptor.to_flatmap()
+        |> Map.values()
+        |> Enum.count(&(&1 == "."))
+
+      reduced_count = Enum.count(reduced, &(&1 == "."))
+
+      assert_in_delta mapped_count, reduced_count, 1
     end
   end
 end
