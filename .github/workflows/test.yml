@@ -3,19 +3,18 @@ name: Test
 on: [push, pull_request]
 
 jobs:
-  build:
-
+  test:
     runs-on: ubuntu-latest
-
-    container:
-      image: elixir:1.9.1-slim
-
+    name: OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    strategy:
+      matrix:
+        otp: [21.3, 22.2]
+        elixir: [1.9.4]
     steps:
-    - uses: actions/checkout@v1
-    - name: Install Dependencies
-      run: |
-        MIX_ENV=ci mix local.rebar --force
-        MIX_ENV=ci mix local.hex --force
-        MIX_ENV=ci mix deps.get
-    - name: Run All Tests
-      run: MIX_ENV=ci mix test
+      - uses: actions/checkout@v2
+      - uses: actions/setup-elixir@v1
+        with:
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
+      - run: MIX_ENV=ci mix deps.get
+      - run: MIX_ENV=ci mix test
