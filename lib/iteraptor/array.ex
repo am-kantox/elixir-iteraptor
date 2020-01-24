@@ -279,31 +279,30 @@ defmodule Iteraptor.Array do
        end)}
     end
 
+    def reduce(array, acc, fun),
+      do: Enumerable.List.reduce(Array.to_list(array), acc, fun)
+
     if Version.compare(System.version(), "1.10.0-dev") == :lt do
       def slice(array) do
         {:ok, Array.size(array), &Enumerable.List.slice(Array.to_list(array), &1, &2)}
       end
     else
+      defp slice(_list, _start, 0, _size), do: []
+      defp slice(list, start, count, size) when start + count == size, do: list |> drop(start)
+      defp slice(list, start, count, _size), do: list |> drop(start) |> take(count)
+
+      defp drop(list, 0), do: list
+      defp drop([_ | tail], count), do: drop(tail, count - 1)
+
+      defp take(_list, 0), do: []
+      defp take([head | tail], count), do: [head | take(tail, count - 1)]
+
       def slice(array) do
         size = Array.size(array)
 
         {:ok, size, &slice(Array.to_list(array), &1, &2, size)}
       end
     end
-
-    def reduce(array, acc, fun),
-      do: Enumerable.List.reduce(Array.to_list(array), acc, fun)
-
-    @doc false
-    defp slice(_list, _start, 0, _size), do: []
-    defp slice(list, start, count, size) when start + count == size, do: list |> drop(start)
-    defp slice(list, start, count, _size), do: list |> drop(start) |> take(count)
-
-    defp drop(list, 0), do: list
-    defp drop([_ | tail], count), do: drop(tail, count - 1)
-
-    defp take(_list, 0), do: []
-    defp take([head | tail], count), do: [head | take(tail, count - 1)]
   end
 
   defimpl Collectable do
