@@ -295,9 +295,11 @@ defmodule Iteraptor.Utils do
       iex> Iteraptor.Utils.squeeze([a: [:foo, :bar], a: [b: [c: 3.14]]])
       [a: [:foo, :bar, {:b, [c: 3.14]}]]
   """
-  @spec squeeze(%{} | keyword() | list() | Access.t()) :: %{} | keyword() | list()
+  @spec squeeze(%{} | keyword() | list() | Access.t(), keyword()) :: %{} | keyword() | list()
   # credo:disable-for-lines:59
-  def squeeze(input) when is_map(input) or is_list(input) do
+  def squeeze(input, opts \\ [])
+
+  def squeeze(input, opts) when is_map(input) or is_list(input) do
     {type, input, into} = type(input)
 
     {result, _} =
@@ -348,16 +350,21 @@ defmodule Iteraptor.Utils do
           end
       end)
 
-    result
-    |> Enum.into(into, fn
-      {k, v} when is_list(v) -> {k, v |> squeeze() |> :lists.reverse()}
-      {k, v} -> {k, squeeze(v)}
-      v -> v
-    end)
-    |> try_to_list()
+    result =
+      result
+      |> Enum.into(into, fn
+        {k, v} when is_list(v) -> {k, v |> squeeze(opts) |> :lists.reverse()}
+        {k, v} -> {k, squeeze(v, opts)}
+        v -> v
+      end)
+      |> try_to_list()
+
+    if opts[:structs] == :keep && is_map(result) and type != Map,
+      do: struct(type, result),
+      else: result
   end
 
-  def squeeze(input), do: input
+  def squeeze(input, _opts), do: input
 
   @doc false
   def struct_checker(env, _bytecode), do: env.module.__struct__

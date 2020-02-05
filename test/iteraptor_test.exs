@@ -131,4 +131,16 @@ defmodule Iteraptor.Test do
     assert result =~ "{[:nested], %Iteraptor.BareStruct{bar: :baz, foo: 42}}"
     assert result =~ "{[:ok], 42}"
   end
+
+  test "handles nested structs properly with [structs: :keep]" do
+    result =
+      Iteraptor.map(
+        %{ok: 42, nested: %Iteraptor.BareStruct{}},
+        & &1,
+        structs: :keep,
+        yield: :all
+      )
+
+    assert %Iteraptor.BareStruct{} = result[:nested]
+  end
 end

@@ -200,8 +200,10 @@ defmodule Iteraptor do
   - `opts`: the options to be passed to the iteration
     - `yield`: `[:all | :maps | :keywords | nil]` what to yield; _default:_ `nil`
     for yielding _values only_
-    - `structs`: `[:values | nil]` when `:values`, the nested structs are considered
-    leaves and returned to the iterator instead of being iterated through
+    - `structs`: `[:values | :keep | nil]` how to handle structs;  _default:_ `nil`
+    for treating them as `map`s. When `:values`, the nested structs
+    are considered leaves and returned to the iterator instead of being iterated
+    through; when `:keep` it returns a struct back after iteration
 
   ## Examples
 
@@ -262,8 +264,13 @@ defmodule Iteraptor do
 
   def map(input, fun, opts \\ []) do
     unless is_function(fun, 1), do: raise("Function or arity fun/1 is required")
-    {result, _} = traverse(input, fun, opts, {[], nil})
-    result
+
+    {type, _, into} = type(input)
+    {result, _} = traverse(input, fun, opts, {[], into})
+
+    if opts[:structs] == :keep && is_map(result) and type != Map,
+      do: struct(type, result),
+      else: result
   end
 
   @doc """
@@ -302,10 +309,14 @@ defmodule Iteraptor do
   def reduce(input, acc \\ nil, fun, opts \\ []) do
     unless is_function(fun, 2), do: raise("Function or arity fun/2 is required")
 
-    acc = if is_nil(acc), do: with({_, _, into} <- type(input), do: into), else: acc
+    {type, _, into} = type(input)
+    acc = if is_nil(acc), do: into, else: acc
     fun_wrapper = fn kv, acc -> {kv, fun.(kv, acc)} end
     {_, result} = traverse(input, fun_wrapper, opts, {[], acc})
-    result
+
+    if opts[:structs] == :keep && is_map(result) and type != Map,
+      do: struct(type, result),
+      else: result
   end
 
   @doc """
@@ -344,7 +355,17 @@ defmodule Iteraptor do
 
   def map_reduce(input, acc \\ %{}, fun, opts \\ []) do
     unless is_function(fun, 2), do: raise("Function or arity fun/2 is required")
-    traverse(input, fun, opts, {[], acc})
+
+    {type, _, into} = type(input)
+    acc = if is_nil(acc), do: into, else: acc
+    {map_result, result} = traverse(input, fun, opts, {[], acc})
+
+    result =
+      if opts[:structs] == :keep && is_map(result) and type != Map,
+        do: struct(type, result),
+        else: result
+
+    {map_result, result}
   end
 
   @doc """
@@ -373,14 +394,17 @@ defmodule Iteraptor do
 
   def filter(input, fun, opts \\ []) do
     unless is_function(fun, 1), do: raise("Function or arity fun/1 is required")
-    acc = with {_, _, into} <- type(input), do: into
+    {type, _, acc} = type(input)
 
     fun_wrapper = fn {k, v}, acc ->
       if fun.({k, v}), do: {{k, v}, deep_put_in(acc, {k, v}, opts)}, else: {{k, v}, acc}
     end
 
     {_, result} = traverse(input, fun_wrapper, opts, {[], acc})
-    result
+
+    if opts[:structs] == :keep && is_map(result) and type != Map,
+      do: struct(type, result),
+      else: result
   end
 
   @doc """
@@ -487,7 +511,14 @@ defmodule Iteraptor do
           end
         end)
 
-      {value |> Enum.into(into) |> squeeze(), acc}
+      result = Enum.into(value, into)
+
+      result =
+        if opts[:structs] == :keep && is_map(result) and type != Map,
+          do: struct(type, result),
+          else: result
+
+      {squeeze(result, opts), acc}
     end
   end
 
