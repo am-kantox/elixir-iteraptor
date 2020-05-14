@@ -98,6 +98,15 @@ defmodule Iteraptor.Test do
            }
   end
 
+  test "Iteraptor.jsonify/2 works for keys: false as well" do
+    result = Iteraptor.jsonify([foo: :bar, baz: [:zzz, 42]], keys: false)
+
+    assert result == %{
+             foo: :bar,
+             baz: [:zzz, 42]
+           }
+  end
+
   test "map[:full_parent] / each returns the original map" do
     Enum.each([{@nest, :tuple}, {@list, nil}], fn {input, full_parent} ->
       assert(input == Iteraptor.each(input, fn _ -> :ok end, full_parent: full_parent))

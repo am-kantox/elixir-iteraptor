@@ -421,6 +421,9 @@ defmodule Iteraptor do
 
       iex> Iteraptor.jsonify([foo: [bar: [baz: :zoo], boo: 42]], values: true)
       %{"foo" => %{"bar" => %{"baz" => "zoo"}, "boo" => 42}}
+
+      iex> Iteraptor.jsonify([foo: [bar: [baz: :zoo], boo: 42]], keys: false)
+      %{foo: %{bar: %{baz: :zoo}, boo: 42}}
   """
   @spec jsonify(Access.container() | any(), opts :: list()) :: %{required(binary()) => any()}
   def jsonify(input, opts \\ [])
@@ -435,14 +438,17 @@ defmodule Iteraptor do
       input,
       fn
         {k, [{_, _} | _] = kw} when is_list(k) ->
-          {k |> List.last() |> to_string(), jsonify(kw, opts)}
+          {k |> List.last() |> do_stringify(opts), jsonify(kw, opts)}
 
         {k, v} when is_list(k) ->
-          {k |> List.last() |> to_string(), jsonify(v, opts)}
+          {k |> List.last() |> do_stringify(opts), jsonify(v, opts)}
       end,
       yield: :all
     )
   end
+
+  defp do_stringify(k, opts),
+    do: if(Keyword.get(opts, :keys, true), do: to_string(k), else: k)
 
   ##############################################################################
 
