@@ -424,6 +424,9 @@ defmodule Iteraptor do
 
       iex> Iteraptor.jsonify([foo: [bar: [baz: :zoo], boo: 42]], keys: false)
       %{foo: %{bar: %{baz: :zoo}, boo: 42}}
+
+      iex> Iteraptor.jsonify(%{foo: [1, [bar: 2], 3], bar: [baz: 42]}, transform: fn _ -> 1 end)
+      %{"foo" => [1, %{"bar" => 2}, 3], "bar" => %{"baz" => 42}}
   """
   @spec jsonify(Access.container() | any(), opts :: list()) :: %{required(binary()) => any()}
   def jsonify(input, opts \\ [])
@@ -441,6 +444,14 @@ defmodule Iteraptor do
           {k |> List.last() |> do_stringify(opts), jsonify(kw, opts)}
 
         {k, v} when is_list(k) ->
+          val =
+            case Keyword.get(opts, :transform) do
+              fun when is_function(fun, 1) -> fun.(v)
+              # fun when is_function(fun, 2) -> fun.(List.last(k), v)
+              fun when is_function(fun, 2) -> fun.(Enum.drop(k, -1), {List.last(k), v})
+              _ -> v
+            end
+
           {k |> List.last() |> do_stringify(opts), jsonify(v, opts)}
       end,
       yield: :all
