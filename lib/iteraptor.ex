@@ -437,6 +437,8 @@ defmodule Iteraptor do
     do: if(opts[:values] && is_atom(input), do: to_string(input), else: input)
 
   def jsonify(input, opts) do
+    stringify_keys = Keyword.get(opts, :keys, true)
+    
     Iteraptor.map(
       input,
       fn
@@ -458,8 +460,10 @@ defmodule Iteraptor do
     )
   end
 
-  defp do_stringify(k, opts),
-    do: if(Keyword.get(opts, :keys, true), do: to_string(k), else: k)
+  @spec do_stringify(any(), boolean()) :: any() | binary()
+  defp do_stringify(k, false), do: k
+  defp do_stringify(k, _) when is_atom(k), do: Atom.to_string(k) # faster
+  defp do_stringify(k, _), do: to_string(k)
 
   ##############################################################################
 
