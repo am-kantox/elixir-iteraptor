@@ -411,6 +411,8 @@ defmodule Iteraptor do
   Produces a term ready-to-use with JSON interchange. Stringifies all keys
   and converts keywords to maps.
 
+  If the option `keys: false` is given, leaves keys intact.
+
   ## Examples
 
       iex> Iteraptor.jsonify([foo: [:zzz], bar: :baz], values: true)
