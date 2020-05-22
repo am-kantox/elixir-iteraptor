@@ -427,9 +427,7 @@ defmodule Iteraptor do
       iex> Iteraptor.jsonify([foo: [bar: [baz: :zoo], boo: 42]], keys: false)
       %{foo: %{bar: %{baz: :zoo}, boo: 42}}
   """
-  @spec jsonify(Access.container() | any(), opts :: list()) :: %{
-          required(binary() | atom()) => any()
-        }
+  @spec jsonify(Access.container() | any(), opts :: list()) :: map()
   def jsonify(input, opts \\ [])
   def jsonify([{_, _} | _] = input, opts), do: input |> Map.new() |> jsonify(opts)
   def jsonify(input, opts) when is_list(input), do: Enum.map(input, &jsonify(&1, opts))
