@@ -19,6 +19,7 @@ defmodule Iteraptor.Mixfile do
       aliases: aliases(),
       docs: docs(),
       xref: [exclude: []],
+      consolidate_protocols: Mix.env() != :test,
       dialyzer: [
         plt_file: {:no_warn, ".dialyzer/plts/dialyzer.plt"},
         ignore_warnings: ".dialyzer/ignore.exs"

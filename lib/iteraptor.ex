@@ -451,7 +451,7 @@ defmodule Iteraptor do
 
   @spec do_stringify(any(), boolean()) :: any() | binary()
   defp do_stringify(k, false), do: k
-  defp do_stringify(k, _) when is_atom(k), do: Atom.to_string(k) # faster
+  defp do_stringify(k, _) when is_atom(k), do: Atom.to_string(k)
   defp do_stringify(k, _), do: to_string(k)
 
   ##############################################################################
