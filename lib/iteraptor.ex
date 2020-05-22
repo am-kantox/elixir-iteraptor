@@ -421,6 +421,9 @@ defmodule Iteraptor do
 
       iex> Iteraptor.jsonify([foo: [bar: [baz: :zoo], boo: 42]], values: true)
       %{"foo" => %{"bar" => %{"baz" => "zoo"}, "boo" => 42}}
+
+      iex> Iteraptor.jsonify([foo: [bar: [baz: :zoo], boo: 42]], keys: false)
+      %{foo: %{bar: %{baz: :zoo}, boo: 42}}
   """
   @spec jsonify(Access.container() | any(), opts :: list()) :: %{required(binary()) => any()}
   def jsonify(input, opts \\ [])
@@ -431,18 +434,25 @@ defmodule Iteraptor do
     do: if(opts[:values] && is_atom(input), do: to_string(input), else: input)
 
   def jsonify(input, opts) do
+    stringify_keys = Keyword.get(opts, :keys, true)
+
     Iteraptor.map(
       input,
       fn
         {k, [{_, _} | _] = kw} when is_list(k) ->
-          {k |> List.last() |> to_string(), jsonify(kw, opts)}
+          {k |> List.last() |> do_stringify(stringify_keys), jsonify(kw, opts)}
 
         {k, v} when is_list(k) ->
-          {k |> List.last() |> to_string(), jsonify(v, opts)}
+          {k |> List.last() |> do_stringify(stringify_keys), jsonify(v, opts)}
       end,
       yield: :all
     )
   end
+
+  @spec do_stringify(any(), boolean()) :: any() | binary()
+  defp do_stringify(k, false), do: k
+  defp do_stringify(k, _) when is_atom(k), do: Atom.to_string(k) # faster
+  defp do_stringify(k, _), do: to_string(k)
 
   ##############################################################################
 
