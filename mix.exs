@@ -70,7 +70,7 @@ defmodule Iteraptor.Mixfile do
       licenses: ["MIT"],
       links: %{
         "GitHub" => "https://github.com/#{@github}",
-        "Docs" => "http://hexdocs.pm/@{app}"
+        "Docs" => "http://hexdocs.pm/#{@app}"
       }
     ]
   end
