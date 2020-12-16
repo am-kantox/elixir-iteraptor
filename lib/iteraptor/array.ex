@@ -60,12 +60,7 @@ defmodule Iteraptor.Array do
 
       iex> Iteraptor.Array.new()
       #Array<[]>
-  """
 
-  # @spec new(enumerable :: nil | t() | integer() | Enum.t(), transform :: (term() -> any())) :: t()
-  def new(enumerable \\ nil, transform \\ nil)
-
-  @doc """
   Creates an array of the given length or from enumerable. Might we used to wrap
   the existing instance of `Iteraptor.Array`.
 
@@ -80,6 +75,9 @@ defmodule Iteraptor.Array do
       iex> Iteraptor.Array.new([1, 2, 3], fn x -> 2 * x end)
       #Array<[2, 4, 6]>
   """
+  # @spec new(enumerable :: nil | t() | integer() | Enum.t(), transform :: (term() -> any())) :: t()
+  def new(enumerable \\ nil, transform \\ nil)
+
   def new(nil, nil), do: %Array{}
 
   def new(%__MODULE__{} = array, nil), do: array
