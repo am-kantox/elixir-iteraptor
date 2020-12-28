@@ -91,7 +91,23 @@ defmodule Iteraptor do
       %{"a_b_c" => 42, "a_b_d_0" => nil, "a_b_d_1" => 42, "a_e_0" => :f, "a_e_1" => 42}
   """
 
-  @spec to_flatmap(%{} | [...], Keyword.t()) :: %{}
+  @type option ::
+          {:keys, :reverse}
+          | {:yield, :all | :none | :maps | :lists}
+          | {:structs, :values | :keep}
+  @type options :: [option()]
+
+  @typedoc """
+  The function that might be passed to all the traversion functions.
+
+  When it’s a function or arity `1`, it receives `{key, value}` tuple when the key
+    is the list of keys down the nesting levels.
+
+  When its arity is `2`, it receives `key` and `value` as separated arguments.
+  """
+  @type traverse_fun :: ({any(), any()} -> any()) | (any(), any() -> any())
+
+  @spec to_flatmap(Access.t(), options()) :: %{}
 
   def to_flatmap(input, opts \\ []) when is_map(input) or is_list(input) do
     reducer = fn {k, v}, acc ->
@@ -155,10 +171,9 @@ defmodule Iteraptor do
       {[0, :b], 42}
       [%{a: 42, b: 42}]
   """
-  @spec from_flatmap(%{}, ({any(), any()} -> any()) | nil, Keyword.t()) ::
-          %{} | [...] | Keyword.t()
+  @spec from_flatmap(%{}, traverse_fun(), options()) :: Access.t()
 
-  def from_flatmap(input, transformer \\ nil, opts \\ []) when is_map(input) do
+  def from_flatmap(input, transformer \\ & &1, opts \\ []) when is_map(input) do
     reducer = fn {k, v}, acc ->
       key =
         case k |> Enum.join(delimiter(opts)) |> String.split(delimiter(opts)) do
@@ -166,14 +181,12 @@ defmodule Iteraptor do
           list -> Enum.map(list, &smart_convert/1)
         end
 
+      transformer_key = if opts[:keys] == :reverse, do: Enum.reverse(key), else: key
+
       value =
-        if is_nil(transformer) do
-          v
-        else
-          case transformer.({key, v}) do
-            {^key, any} -> any
-            any -> any
-          end
+        case transformer.({transformer_key, v}) do
+          {^key, any} -> any
+          any -> any
         end
 
       deep_put_in(acc, {key, value}, opts)
@@ -198,9 +211,10 @@ defmodule Iteraptor do
     is an array or deeply nested keys;
   e.g. on `%{a: {b: 42}}` will be called once, with tuple `{[:a, :b], 42}`;
   - `opts`: the options to be passed to the iteration
-    - `yield`: `[:all | :maps | :keywords | nil]` what to yield; _default:_ `nil`
+    - `yield`: `[:all | :none | :maps | :lists]` what to yield; _default:_ `:all`
     for yielding _values only_
-    - `structs`: `[:values | :keep | nil]` how to handle structs;  _default:_ `nil`
+    - `keys`: `[:reverse]` reverse keys list to ease pattern matching; _default:_ `nil`
+    - `structs`: `[:values | :keep]` how to handle structs;  _default:_ `nil`
     for treating them as `map`s. When `:values`, the nested structs
     are considered leaves and returned to the iterator instead of being iterated
     through; when `:keep` it returns a struct back after iteration
@@ -218,8 +232,7 @@ defmodule Iteraptor do
       %{a: %{b: %{c: 42}}}
   """
 
-  @spec each(%{} | Keyword.t() | [...] | Access.t(), ({any(), any()} -> any()), Keyword.t()) ::
-          %{} | Keyword.t() | [...] | Access.t()
+  @spec each(Access.t(), traverse_fun(), options()) :: Access.t()
 
   def each(input, fun, opts \\ []) do
     map(input, fun, opts)
@@ -239,9 +252,7 @@ defmodule Iteraptor do
   - `fun`: callback to be called on each **`{key, value}`** pair, where `key`
     is an array or deeply nested keys;
   e.g. on `%{a: {b: 42}}` will be called once, with tuple `{[:a, :b], 42}`;
-  - `opts`: the options to be passed to the iteration
-    - `yield`: `[:all | :maps | :keywords |` what to yield; _default:_ `nil`
-    for yielding _values only_.
+  - `opts`: the options to be passed to the iteration (see `Iteraptpr.each/3`)
 
   ## Examples
 
@@ -259,8 +270,7 @@ defmodule Iteraptor do
       %{a: %{b: "YAY"}}
   """
 
-  @spec map(%{} | Keyword.t() | [...] | Access.t(), ({any(), any()} -> any()), Keyword.t()) ::
-          %{} | Keyword.t() | [...] | Access.t()
+  @spec map(Access.t(), traverse_fun(), options()) :: Access.t()
 
   def map(input, fun, opts \\ []) do
     unless is_function(fun, 1), do: raise("Function or arity fun/1 is required")
@@ -285,9 +295,7 @@ defmodule Iteraptor do
   - `fun`: callback to be called on each **`{key, value}, acc`** pair,
     where `key` is an array or deeply nested keys, `value` is the value and
     `acc` is the accumulator;
-  - `opts`: the options to be passed to the iteration
-    - `yield`: `[:all | :maps | :keywords |` what to yield; _default:_ `nil`
-    for yielding _values only_.
+  - `opts`: the options to be passed to the iteration (see `Iteraptpr.each/3`)
 
   ## Examples
 
@@ -299,12 +307,7 @@ defmodule Iteraptor do
       ["a", "a_b", "a_b_c"]
   """
 
-  @spec reduce(
-          %{} | Keyword.t() | [...] | Access.t(),
-          %{} | Keyword.t() | [...] | Access.t(),
-          ({any(), any()}, any() -> any()),
-          Keyword.t()
-        ) :: {%{} | Keyword.t() | [...] | Access.t(), any()}
+  @spec reduce(Access.t(), Access.t(), traverse_fun(), options()) :: {Access.t(), any()}
 
   def reduce(input, acc \\ nil, fun, opts \\ []) do
     unless is_function(fun, 2), do: raise("Function or arity fun/2 is required")
@@ -332,9 +335,7 @@ defmodule Iteraptor do
   - `fun`: callback to be called on each **`{key, value}, acc`** pair,
     where `key` is an array or deeply nested keys, `value` is the value and
     `acc` is the accumulator;
-  - `opts`: the options to be passed to the iteration
-    - `yield`: `[:all | :maps | :keywords |` what to yield; _default:_ `nil`
-    for yielding _values only_.
+  - `opts`: the options to be passed to the iteration  (see `Iteraptpr.each/3`)
 
   ## Examples
 
@@ -346,12 +347,7 @@ defmodule Iteraptor do
       {%{a: %{b: %{c: 84}}}, ["a.b.c=", "a.b", "a"]}
   """
 
-  @spec map_reduce(
-          %{} | Keyword.t() | [...] | Access.t(),
-          %{} | Keyword.t() | [...] | Access.t(),
-          ({any(), any()}, any() -> any()),
-          Keyword.t()
-        ) :: {%{} | Keyword.t() | [...] | Access.t(), any()}
+  @spec map_reduce(Access.t(), Access.t(), traverse_fun(), options()) :: {Access.t(), any()}
 
   def map_reduce(input, acc \\ %{}, fun, opts \\ []) do
     unless is_function(fun, 2), do: raise("Function or arity fun/2 is required")
@@ -378,9 +374,7 @@ defmodule Iteraptor do
 
   - `input`: nested map/list/keyword to be filtered.
   - `fun`: callback to be called on each **`{key, value}`** to filter entries.
-  - `opts`: the options to be passed to the iteration
-    - `yield`: `[:all | :maps | :keywords |` what to yield; _default:_ `nil`
-    for yielding _values only_.
+  - `opts`: the options to be passed to the iteration (see `Iteraptpr.each/3`)
 
   ## Examples
 
@@ -389,8 +383,7 @@ defmodule Iteraptor do
       %{a: %{e: %{c: 42}, d: %{c: 42}}, c: 42}
   """
 
-  @spec filter(%{} | Keyword.t() | [...] | Access.t(), ({any(), any()} -> any()), Keyword.t()) ::
-          {%{} | Keyword.t() | [...] | Access.t(), any()}
+  @spec filter(Access.t(), traverse_fun(), options()) :: {Access.t(), any()}
 
   def filter(input, fun, opts \\ []) do
     unless is_function(fun, 1), do: raise("Function or arity fun/1 is required")
@@ -427,7 +420,7 @@ defmodule Iteraptor do
       iex> Iteraptor.jsonify([foo: [bar: [baz: :zoo], boo: 42]], keys: false)
       %{foo: %{bar: %{baz: :zoo}, boo: 42}}
   """
-  @spec jsonify(Access.container() | any(), opts :: list()) :: map()
+  @spec jsonify(Access.container() | any(), keyword()) :: map()
   def jsonify(input, opts \\ [])
   def jsonify([{_, _} | _] = input, opts), do: input |> Map.new() |> jsonify(opts)
   def jsonify(input, opts) when is_list(input), do: Enum.map(input, &jsonify(&1, opts))
@@ -458,15 +451,18 @@ defmodule Iteraptor do
 
   ##############################################################################
 
-  @spec traverse_callback(({any(), any()} -> any()) | (any(), any() -> any()), {any(), any()}) ::
-          {any(), any()}
+  @spec traverse_callback(nil | traverse_fun(), {any(), any()}, nil | :reverse) :: {any(), any()}
 
-  defp traverse_callback(fun, {value, acc}) do
-    case fun do
-      f when is_function(fun, 1) -> {f.(value), nil}
-      f when is_function(fun, 2) -> f.(value, acc)
-    end
-  end
+  defp traverse_callback(nil, {value, acc}, _), do: {value, acc}
+
+  defp traverse_callback(fun, {{keys, value}, acc}, :reverse),
+    do: traverse_callback(fun, {{Enum.reverse(keys), value}, acc}, nil)
+
+  defp traverse_callback(fun, {value, acc}, nil) when is_function(fun, 1),
+    do: {fun.(value), acc}
+
+  defp traverse_callback(fun, {value, acc}, nil) when is_function(fun, 2),
+    do: fun.(value, acc)
 
   defmacrop traverse_value({k, v}, fun, opts, {deep, acc}) do
     quote do
@@ -475,16 +471,10 @@ defmodule Iteraptor do
     end
   end
 
-  @spec traverse(
-          %{} | Keyword.t() | [...] | Access.t(),
-          ({any(), any()} -> any()) | (any(), any() -> any()),
-          Keyword.t(),
-          {[any()], any()}
-        ) :: {%{} | Keyword.t() | [...] | Access.t(), any()}
+  @spec traverse(Access.t(), traverse_fun(), options(), {[any()], any()}) :: {Access.t(), any()}
 
   defp traverse(input, fun, opts, key_acc)
 
-  # credo:disable-for-lines:41
   defp traverse(input, fun, opts, {key, acc}) when is_list(input) or is_map(input) do
     {type, from, into} = type(input)
 
@@ -507,10 +497,11 @@ defmodule Iteraptor do
 
           {value, acc} =
             case {opts[:yield], is_map(v) and not s_as_v, is_list(v)} do
-              {_, false, false} -> traverse_callback(fun, {{deep, v}, acc})
-              {:all, _, _} -> traverse_callback(fun, {{deep, v}, acc})
-              {:lists, _, true} -> traverse_callback(fun, {{deep, v}, acc})
-              {:maps, true, _} -> traverse_callback(fun, {{deep, v}, acc})
+              {_, false, false} -> traverse_callback(fun, {{deep, v}, acc}, opts[:keys])
+              {:all, _, _} -> traverse_callback(fun, {{deep, v}, acc}, opts[:keys])
+              {:none, _, _} -> traverse_callback(nil, {{deep, v}, acc}, opts[:keys])
+              {:lists, _, true} -> traverse_callback(fun, {{deep, v}, acc}, opts[:keys])
+              {:maps, true, _} -> traverse_callback(fun, {{deep, v}, acc}, opts[:keys])
               _ -> {{deep, v}, acc}
             end
 
@@ -535,31 +526,4 @@ defmodule Iteraptor do
   end
 
   defp traverse(input, _fun, _opts, {_key, acc}), do: {input, acc}
-
-  # defp process(input, :struct, {acc, key, fun}, opts) do
-  #   struct_name = input.__struct__ |> inspect |> String.replace(".", struct_joiner(opts))
-  #   input
-  #     |> Map.keys
-  #     |> Enum.reject(& &1 == :__struct__)
-  #     |> Enum.map(fn e ->
-  #          {"#{struct_name}%#{e}", get_in(input, [Access.key!(e)])}
-  #        end)
-  #     |> Enum.into(into(opts))
-  #     |> process(Map, {acc, key, fun}, opts)
-  # end
-
-  ##############################################################################
-
-  ##############################################################################
-
-  # defp is_struct(input) when is_map(input) do
-  #   input |> Enum.reduce(nil, fn {k, _}, acc ->
-  #     case k |> to_string |> String.split(~r{#{@struct_joiner}(?=[^#{@struct_joiner}]*$)}) do
-  #       [^acc, _] -> acc
-  #       [struct_name, _] -> if acc == nil, do: struct_name, else: false
-  #       _ -> false
-  #     end
-  #   end)
-  # end
-  # defp is_struct(_), do: false
 end

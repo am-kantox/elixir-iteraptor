@@ -77,6 +77,20 @@ defmodule Iteraptor.Test do
     assert result =~ "{[:a2, :a4, :a6, :a8], 42}"
   end
 
+  test "keyword / each prints keys in the reversed order" do
+    result =
+      capture_log(fn ->
+        @keyword |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end, keys: :reverse)
+      end)
+
+    assert result =~ "{[:a1], 42}"
+    assert result =~ "{[:a3, :a2], 42}"
+    assert result =~ "{[:a5, :a4, :a2], 42}"
+    assert result =~ "{[:a7, :a6, :a4, :a2], 42}"
+    assert result =~ "{[:a7, :a6, :a4, :a2], 3.14}"
+    assert result =~ "{[:a8, :a6, :a4, :a2], 42}"
+  end
+
   test "Iteraptor.jsonify/2 works" do
     result = Iteraptor.jsonify(@keyword)
 
