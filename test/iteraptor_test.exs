@@ -80,7 +80,7 @@ defmodule Iteraptor.Test do
   test "keyword / each prints keys in the reversed order" do
     result =
       capture_log(fn ->
-        @keyword |> Iteraptor.each(fn {k, v} -> Logger.debug(inspect({k, v})) end, keys: :reverse)
+        @keyword |> Iteraptor.map(fn {k, v} -> Logger.debug(inspect({k, v})) end, keys: :reverse)
       end)
 
     assert result =~ "{[:a1], 42}"

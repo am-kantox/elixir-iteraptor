@@ -120,7 +120,7 @@ defmodule Iteraptor do
       Map.put(acc, key, v)
     end
 
-    with {_, flattened} <- reduce(input, %{}, reducer, opts), do: flattened
+    reduce(input, %{}, reducer, opts)
   end
 
   @doc """
@@ -214,7 +214,7 @@ defmodule Iteraptor do
     - `yield`: `[:all | :none | :maps | :lists]` what to yield; _default:_ `:all`
     for yielding _values only_
     - `keys`: `[:reverse]` reverse keys list to ease pattern matching; _default:_ `nil`
-    - `structs`: `[:values | :keep]` how to handle structs;  _default:_ `nil`
+    - `structs`: `[:values | :keep]` how to handle structs;  _default:_ `:values`
     for treating them as `map`s. When `:values`, the nested structs
     are considered leaves and returned to the iterator instead of being iterated
     through; when `:keep` it returns a struct back after iteration
@@ -278,9 +278,7 @@ defmodule Iteraptor do
     {type, _, into} = type(input)
     {result, _} = traverse(input, fun, opts, {[], into})
 
-    if opts[:structs] == :keep && is_map(result) and type != Map,
-      do: struct(type, result),
-      else: result
+    maybe_struct(opts[:structs], result, type)
   end
 
   @doc """
@@ -307,7 +305,7 @@ defmodule Iteraptor do
       ["a", "a_b", "a_b_c"]
   """
 
-  @spec reduce(Access.t(), Access.t(), traverse_fun(), options()) :: {Access.t(), any()}
+  @spec reduce(Access.t(), Access.t(), traverse_fun(), options()) :: Access.t()
 
   def reduce(input, acc \\ nil, fun, opts \\ []) do
     unless is_function(fun, 2), do: raise("Function or arity fun/2 is required")
@@ -317,9 +315,7 @@ defmodule Iteraptor do
     fun_wrapper = fn kv, acc -> {kv, fun.(kv, acc)} end
     {_, result} = traverse(input, fun_wrapper, opts, {[], acc})
 
-    if opts[:structs] == :keep && is_map(result) and type != Map,
-      do: struct(type, result),
-      else: result
+    maybe_struct(opts[:structs], result, type)
   end
 
   @doc """
@@ -356,12 +352,7 @@ defmodule Iteraptor do
     acc = if is_nil(acc), do: into, else: acc
     {map_result, result} = traverse(input, fun, opts, {[], acc})
 
-    result =
-      if opts[:structs] == :keep && is_map(result) and type != Map,
-        do: struct(type, result),
-        else: result
-
-    {map_result, result}
+    {map_result, maybe_struct(opts[:structs], result, type)}
   end
 
   @doc """
@@ -383,7 +374,7 @@ defmodule Iteraptor do
       %{a: %{e: %{c: 42}, d: %{c: 42}}, c: 42}
   """
 
-  @spec filter(Access.t(), traverse_fun(), options()) :: {Access.t(), any()}
+  @spec filter(Access.t(), traverse_fun(), options()) :: Access.t()
 
   def filter(input, fun, opts \\ []) do
     unless is_function(fun, 1), do: raise("Function or arity fun/1 is required")
@@ -395,9 +386,7 @@ defmodule Iteraptor do
 
     {_, result} = traverse(input, fun_wrapper, opts, {[], acc})
 
-    if opts[:structs] == :keep && is_map(result) and type != Map,
-      do: struct(type, result),
-      else: result
+    maybe_struct(opts[:structs], result, type)
   end
 
   @doc """
@@ -443,6 +432,10 @@ defmodule Iteraptor do
       yield: :all
     )
   end
+
+  @spec maybe_struct(:keep | :values, result :: any(), type :: module()) :: Access.t()
+  defp maybe_struct(:keep, %{} = result, type) when type != Map, do: struct(type, result)
+  defp maybe_struct(_, result, _), do: result
 
   @spec do_stringify(any(), boolean()) :: any() | binary()
   defp do_stringify(k, false), do: k
@@ -514,12 +507,7 @@ defmodule Iteraptor do
           end
         end)
 
-      result = Enum.into(value, into)
-
-      result =
-        if opts[:structs] == :keep && is_map(result) and type != Map,
-          do: struct(type, result),
-          else: result
+      result = maybe_struct(opts[:structs], Enum.into(value, into), type)
 
       {squeeze(result, opts), acc}
     end
