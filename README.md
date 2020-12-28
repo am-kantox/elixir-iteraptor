@@ -126,6 +126,10 @@ def deps, do: [{:iteraptor, "~> 1.5"}]
 
 ### Changelog
 
+#### `1.13.0`
+
+`keys: :reverse` configuration option in all traversion functions to simplify pattern matching on leaf keys
+
 #### `1.10.0`
 
 `Iteraptor.jsonify/2` for deep conversion of keyword lists to maps.
