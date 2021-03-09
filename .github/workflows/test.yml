@@ -5,16 +5,24 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
-    name: OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    env:
+      MIX_ENV: test
+    name: OTP ${{matrix.pair.otp}} / Elixir ${{matrix.pair.elixir}}
     strategy:
+      fail-fast: false
       matrix:
-        otp: [23.0]
-        elixir: [1.10.1, 1.11.2]
+        include:
+          - pair:
+              otp: 22.3
+              elixir: 1.10.1
+          - pair:
+              otp: 23.2.5
+              elixir: 1.11.3
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-elixir@v1
+      - uses: erlef/setup-elixir@v1
         with:
-          otp-version: ${{matrix.otp}}
-          elixir-version: ${{matrix.elixir}}
-      - run: MIX_ENV=ci mix deps.get
-      - run: MIX_ENV=ci mix test
+          otp-version: ${{matrix.pair.otp}}
+          elixir-version: ${{matrix.pair.elixir}}
+      - run: mix deps.get
+      - run: mix test

@@ -3,6 +3,28 @@ defmodule Iteraptor.AST do
   `Iteraptor.AST` module traverses AST, allowing `map`, `reduce` and family.
   """
 
+  defp fill_struct(ast, env \\ Macro.escape(__ENV__))
+  defp fill_struct({:%, _, [{:__aliases__, _, _} = aliases, {:%{}, _, data}]}, env) do
+    quote do
+      Kernel.struct!(Macro.struct!(unquote(aliases), unquote(env)), unquote(data))
+    end
+  end
+  defp fill_struct(any, _), do: any
+
+  defp fill_destruct({:%, _, [{:__aliases__, _, _} = _aliases, {:%{}, meta, data}]}),
+    do: {:%{}, meta, data} |> IO.inspect(label: "★★★")
+  defp fill_destruct(any), do: any |> IO.inspect(label: "☆☆☆")
+
+  defmacro do_struct(input), do: fill_struct(input)
+  defmacro do_destruct(input), do: IO.inspect(Macro.expand(input, __CALLER__))
+
+  defmacro destruct(input) do
+    quote do
+      att = unquote(input)
+      Iteraptor.AST.do_destruct(att)
+    end
+  end
+
   @doc """
   Mapper for the AST.
 
