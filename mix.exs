@@ -65,7 +65,7 @@ defmodule Iteraptor.Mixfile do
     # These are the default files included in the package
     [
       name: @app,
-      files: ["lib", "config", "mix.exs", "README*"],
+      files: ["lib", "mix.exs", "README*"],
       maintainers: ["Aleksei Matiushkin"],
       licenses: ["MIT"],
       links: %{
