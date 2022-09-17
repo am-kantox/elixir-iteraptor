@@ -95,7 +95,11 @@ defmodule Iteraptor.Utils do
     end
   end
 
-  @delimiter Application.get_env(:iteraptor, :delimiter, ".")
+  if Version.compare(System.version(), "1.10.0") == :lt do
+    @delimiter apply(Application, :get_env, [:iteraptor, :delimiter, "."])
+  else
+    @delimiter Application.compile_env(:iteraptor, :delimiter, ".")
+  end
 
   @doc false
   @spec delimiter(list()) :: binary()
@@ -149,7 +153,11 @@ defmodule Iteraptor.Utils do
   def join(input, opts \\ []) when is_list(input),
     do: Enum.join(input, delimiter(opts))
 
-  @into Application.get_env(:iteraptor, :into, %{})
+  if Version.compare(System.version(), "1.10.0") == :lt do
+    @into apply(Application, :get_env, [:iteraptor, :into, %{}])
+  else
+    @into Application.compile_env(:iteraptor, :into, %{})
+  end
 
   @doc """
   Safe put the value deeply into the term nesting structure. Creates

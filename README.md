@@ -106,7 +106,7 @@ iex> Iteraptor.Extras.bury([foo: :bar], ~w|a b c d|a, 42)
 [a: [b: [c: [d: 42]]], foo: :bar]
 ```
 
-**As of version `1.2.0` there is an experimental AST traversal feature:
+**As of version `1.2.0` there is an experimental AST traversal feature:**
 
 ```elixir
 iex> Iteraptor.AST.reduce((quote do: 42), [], fn e, acc -> [e | acc], yield: :all)
@@ -125,6 +125,10 @@ def deps, do: [{:iteraptor, "~> 1.5"}]
 
 
 ### Changelog
+
+#### `1.14.0`
+
+Updated dependecies to modern _Elixir_
 
 #### `1.13.0`
 
