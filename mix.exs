@@ -1,4 +1,4 @@
-defmodule Iteraptor.Mixfile do
+defmodule Iteraptor.MixProject do
   use Mix.Project
 
   @app :iteraptor
@@ -11,7 +11,6 @@ defmodule Iteraptor.Mixfile do
       version: @version,
       elixir: "~> 1.5",
       elixirc_paths: elixirc_paths(Mix.env()),
-      build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       description: description(),
       package: package(),
@@ -30,7 +29,7 @@ defmodule Iteraptor.Mixfile do
   # Type "mix help compile.app" for more information
   def application do
     [
-      applications: [:logger]
+      extra_applications: [:logger]
     ]
   end
 
