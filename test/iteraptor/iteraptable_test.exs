@@ -42,7 +42,7 @@ defmodule Iteraptor.Iteraptable.Test do
   @tag capture_log: true
   test "prevents inclusion into non-structs" do
     assert_raise UndefinedFunctionError,
-                 ~r|function Bad.__struct__/0 is undefined|,
+                 ~r|function Bad.__struct__/1 is undefined|,
                  fn ->
                    Module.create(
                      Bad,

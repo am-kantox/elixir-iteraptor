@@ -45,10 +45,10 @@ defmodule Iteraptor.Extras do
 
   ## Examples
 
-      iex> 'letters' |> Iteraptor.Extras.each_cons
-      ['le', 'et', 'tt', 'te', 'er', 'rs']
-      iex> 'letters' |> Iteraptor.Extras.each_cons(4)
-      ['lett', 'ette', 'tter', 'ters']
+      iex> ~c"letters" |> Iteraptor.Extras.each_cons
+      [~c"le", ~c"et", ~c"tt", ~c"te", ~c"er", ~c"rs"]
+      iex> ~c"letters" |> Iteraptor.Extras.each_cons(4)
+      [~c"lett", ~c"ette", ~c"tter", ~c"ters"]
       iex> 1..6 |> Iteraptor.Extras.each_cons(4)
       [[1,2,3,4], [2,3,4,5], [3,4,5,6]]
       iex> "letters" |> Iteraptor.Extras.each_cons(3)

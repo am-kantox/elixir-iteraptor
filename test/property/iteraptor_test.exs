@@ -79,7 +79,12 @@ defmodule Property.Iteraptor.Test do
     do:
       quote(
         do:
-          one_of([maybe_leaf_list(), maybe_leaf_map(), maybe_leaf_map_set(), maybe_leaf_keyword()])
+          one_of([
+            maybe_leaf_list(),
+            maybe_leaf_map(),
+            maybe_leaf_map_set(),
+            maybe_leaf_keyword()
+          ])
       )
 
   test "#each/3 returns itself" do

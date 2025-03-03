@@ -89,7 +89,7 @@ defmodule Iteraptor.Array do
     list = Enum.to_list(enumerable)
 
     map =
-      0..(length(list) - 1)
+      0..(length(list) - 1)//1
       |> Enum.zip(list)
       |> Enum.into(%{})
 

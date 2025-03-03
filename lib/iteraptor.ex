@@ -273,7 +273,7 @@ defmodule Iteraptor do
   @spec map(Access.t(), traverse_fun(), options()) :: Access.t()
 
   def map(input, fun, opts \\ []) do
-    unless is_function(fun, 1), do: raise("Function or arity fun/1 is required")
+    if not is_function(fun, 1), do: raise("Function or arity fun/1 is required")
 
     {type, _, into} = type(input)
     {result, _} = traverse(input, fun, opts, {[], into})
@@ -308,7 +308,7 @@ defmodule Iteraptor do
   @spec reduce(Access.t(), Access.t(), traverse_fun(), options()) :: Access.t()
 
   def reduce(input, acc \\ nil, fun, opts \\ []) do
-    unless is_function(fun, 2), do: raise("Function or arity fun/2 is required")
+    if not is_function(fun, 2), do: raise("Function or arity fun/2 is required")
 
     {type, _, into} = type(input)
     acc = if is_nil(acc), do: into, else: acc
@@ -346,7 +346,7 @@ defmodule Iteraptor do
   @spec map_reduce(Access.t(), Access.t(), traverse_fun(), options()) :: {Access.t(), any()}
 
   def map_reduce(input, acc \\ %{}, fun, opts \\ []) do
-    unless is_function(fun, 2), do: raise("Function or arity fun/2 is required")
+    if not is_function(fun, 2), do: raise("Function or arity fun/2 is required")
 
     {type, _, into} = type(input)
     acc = if is_nil(acc), do: into, else: acc
@@ -377,7 +377,7 @@ defmodule Iteraptor do
   @spec filter(Access.t(), traverse_fun(), options()) :: Access.t()
 
   def filter(input, fun, opts \\ []) do
-    unless is_function(fun, 1), do: raise("Function or arity fun/1 is required")
+    if not is_function(fun, 1), do: raise("Function or arity fun/1 is required")
     {type, _, acc} = type(input)
 
     fun_wrapper = fn {k, v}, acc ->

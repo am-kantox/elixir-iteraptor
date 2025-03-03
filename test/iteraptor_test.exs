@@ -151,7 +151,7 @@ defmodule Iteraptor.Test do
         )
       end)
 
-    assert result =~ "{[:nested], %Iteraptor.BareStruct{bar: :baz, foo: 42}}"
+    assert result =~ "{[:nested], %Iteraptor.BareStruct{foo: 42, bar: :baz}}"
     assert result =~ "{[:ok], 42}"
   end
 

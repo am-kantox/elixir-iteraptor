@@ -250,7 +250,7 @@ defmodule Iteraptor.Utils do
       _ ->
         nil
     end)
-    |> Enum.sort() == 0..(Enum.count(input) - 1) |> Enum.to_list()
+    |> Enum.sort() == 0..(Enum.count(input) - 1)//1 |> Enum.to_list()
   end
 
   def quacks_as_list(_), do: false
@@ -369,7 +369,7 @@ defmodule Iteraptor.Utils do
       end)
       |> try_to_list()
 
-    if opts[:structs] == :keep && is_map(result) and type != Map,
+    if (opts[:structs] == :keep && is_map(result)) and type != Map,
       do: struct(type, result),
       else: result
   end
@@ -377,5 +377,5 @@ defmodule Iteraptor.Utils do
   def squeeze(input, _opts), do: input
 
   @doc false
-  def struct_checker(env, _bytecode), do: env.module.__struct__
+  def struct_checker(%{module: maybe_struct} = _env, _bytecode), do: struct!(maybe_struct)
 end
