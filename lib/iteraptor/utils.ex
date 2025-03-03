@@ -236,6 +236,8 @@ defmodule Iteraptor.Utils do
       false
   """
   @spec quacks_as_list(%{} | keyword() | any()) :: true | false
+  def quacks_as_list([]), do: false
+  def quacks_as_list(map) when map == %{}, do: false
   def quacks_as_list(input) when is_list(input) or is_map(input) do
     input
     |> Enum.map(fn
